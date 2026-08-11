@@ -1,8 +1,38 @@
-# React + Vite
+# 🛍️ E-Commerce Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Responsive e-commerce frontend built with **React and TypeScript**.
 
-Currently, two official plugins are available:
+## 🛠️ Tech Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+* React
+* TypeScript
+* Vite
+* React Router
+* Axios
+* Tailwind CSS
+* Recharts
+
+## 📌 Features
+
+* Customer shopping experience
+* Product search & filtering
+* Cart & checkout
+* Razorpay integration
+* Customer, Vendor & Admin dashboards
+* Order management
+* Responsive design
+
+## 🚀 Run
+
+```bash
+npm install
+npm run dev
+```
+
+Frontend runs on:
+
+```text
+http://localhost:5173
+```
+
+> 🚧 Under development.
