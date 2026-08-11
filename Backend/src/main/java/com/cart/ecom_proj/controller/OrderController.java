@@ -33,6 +33,19 @@ public class OrderController {
 
         return ResponseEntity.ok(response);
     }
+    @GetMapping("/{orderId}")
+public ResponseEntity<OrderResponse> getOrder(
+        Authentication authentication,
+        @PathVariable Long orderId
+) {
+
+    return ResponseEntity.ok(
+            orderService.getOrder(
+                    authentication.getName(),
+                    orderId
+            )
+    );
+}
     @GetMapping
 public ResponseEntity<List<OrderResponse>> getMyOrders(
         Authentication authentication

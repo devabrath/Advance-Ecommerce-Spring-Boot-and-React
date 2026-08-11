@@ -37,6 +37,7 @@ public class OrderService {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
     }
+    
 
     @Transactional
     public OrderResponse checkout(
@@ -221,6 +222,28 @@ public class OrderService {
 
         return toResponse(savedOrder);
     }
+
+    public OrderResponse getOrder(
+        String email,
+        Long orderId
+) {
+
+    User user = userRepository.findByEmail(email)
+            .orElseThrow(() ->
+                    new RuntimeException("User not found")
+            );
+
+    Order order = orderRepository
+            .findByIdAndUser(orderId, user)
+            .orElseThrow(() ->
+                    new RuntimeException(
+                            "Order not found"
+                    )
+            );
+
+    return toResponse(order);
+}
+
     public List<OrderResponse> getMyOrders(String email) {
 
     User user = userRepository.findByEmail(email)
