@@ -57,4 +57,17 @@ public ResponseEntity<List<OrderResponse>> getMyOrders(
             )
     );
 }
+@PutMapping("/{orderId}/cancel")
+public ResponseEntity<OrderResponse> cancelOrder(
+        Authentication authentication,
+        @PathVariable Long orderId
+) {
+
+    return ResponseEntity.ok(
+            orderService.cancelOrder(
+                    authentication.getName(),
+                    orderId
+            )
+    );
+}
 }

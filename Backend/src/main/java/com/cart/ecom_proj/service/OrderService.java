@@ -11,6 +11,7 @@ import com.cart.ecom_proj.repo.ProductRepo;
 import com.cart.ecom_proj.repo.UserRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
+import com.cart.ecom_proj.exception.BadRequestException;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -223,6 +224,61 @@ public class OrderService {
         return toResponse(savedOrder);
     }
 
+    @Transactional
+public OrderResponse cancelOrder(
+        String email,
+        Long orderId
+) {
+
+    User user = userRepository.findByEmail(email)
+            .orElseThrow(() ->
+                    new RuntimeException("User not found")
+            );
+
+    Order order = orderRepository
+            .findByIdAndUser(orderId, user)
+            .orElseThrow(() ->
+                    new RuntimeException("Order not found")
+            );
+
+    if (order.getOrderStatus() == OrderStatus.SHIPPED
+            || order.getOrderStatus() == OrderStatus.DELIVERED) {
+
+        throw new RuntimeException(
+                "Order cannot be cancelled after shipping"
+        );
+    }
+
+    if (order.getOrderStatus() == OrderStatus.CANCELLED) {
+
+        throw new BadRequestException("Order is already cancelled");
+    }
+
+    /*
+     * Restore stock.
+     */
+    for (OrderItem item : order.getItems()) {
+
+        Product product = item.getProduct();
+
+        product.setStockQuantity(
+                product.getStockQuantity()
+                        + item.getQuantity()
+        );
+
+        product.setProductAvailable(true);
+
+        productRepository.save(product);
+    }
+
+    order.setOrderStatus(OrderStatus.CANCELLED);
+
+    Order savedOrder =
+            orderRepository.save(order);
+
+    return toResponse(savedOrder);
+}
+
     public OrderResponse getOrder(
         String email,
         Long orderId
@@ -256,6 +312,111 @@ public class OrderService {
             .stream()
             .map(this::toResponse)
             .toList();
+}
+public List<OrderResponse> getAllOrders() {
+
+    return orderRepository
+            .findAll()
+            .stream()
+            .map(this::toResponse)
+            .toList();
+}
+
+public OrderResponse getOrderById(Long orderId) {
+
+    Order order = orderRepository
+            .findById(orderId)
+            .orElseThrow(() ->
+                    new RuntimeException(
+                            "Order not found"
+                    )
+            );
+
+    return toResponse(order);
+}
+
+@Transactional
+public OrderResponse updateOrderStatus(
+        Long orderId,
+        OrderStatus newStatus
+) {
+
+    Order order = orderRepository
+            .findById(orderId)
+            .orElseThrow(() ->
+                    new RuntimeException(
+                            "Order not found"
+                    )
+            );
+
+    OrderStatus currentStatus =
+            order.getOrderStatus();
+
+    if (currentStatus == OrderStatus.CANCELLED) {
+        throw new BadRequestException(
+                "Cancelled order cannot be updated"
+        );
+    }
+
+    if (currentStatus == OrderStatus.DELIVERED) {
+        throw new BadRequestException(
+                "Delivered order cannot be updated"
+        );
+    }
+
+    if (newStatus == OrderStatus.PLACED) {
+        throw new BadRequestException(
+                "Cannot move order back to PLACED"
+        );
+    }
+
+    if (newStatus == OrderStatus.CONFIRMED
+            && currentStatus != OrderStatus.PLACED) {
+
+        throw new BadRequestException(
+                "Only PLACED orders can be confirmed"
+        );
+    }
+
+    if (newStatus == OrderStatus.SHIPPED
+            && currentStatus != OrderStatus.CONFIRMED) {
+
+        throw new BadRequestException(
+                "Only CONFIRMED orders can be shipped"
+        );
+    }
+
+    if (newStatus == OrderStatus.DELIVERED
+            && currentStatus != OrderStatus.SHIPPED) {
+
+        throw new BadRequestException(
+                "Only SHIPPED orders can be delivered"
+        );
+    }
+
+    if (newStatus == OrderStatus.CANCELLED) {
+
+        for (OrderItem item : order.getItems()) {
+
+            Product product = item.getProduct();
+
+            product.setStockQuantity(
+                    product.getStockQuantity()
+                            + item.getQuantity()
+            );
+
+            product.setProductAvailable(true);
+
+            productRepository.save(product);
+        }
+    }
+
+    order.setOrderStatus(newStatus);
+
+    Order savedOrder =
+            orderRepository.save(order);
+
+    return toResponse(savedOrder);
 }
     private OrderResponse toResponse(Order order) {
 
