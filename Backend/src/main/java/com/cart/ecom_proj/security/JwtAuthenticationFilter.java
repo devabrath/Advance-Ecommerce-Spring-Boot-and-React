@@ -73,6 +73,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         new WebAuthenticationDetailsSource()
                                 .buildDetails(request)
                 );
+                System.out.println(
+        "JWT USER: " + userDetails.getUsername()
+);
+
+System.out.println(
+        "JWT AUTHORITIES: " + userDetails.getAuthorities()
+);
 
                 SecurityContextHolder
                         .getContext()
