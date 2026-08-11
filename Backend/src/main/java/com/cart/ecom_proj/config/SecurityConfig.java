@@ -1,5 +1,6 @@
 package com.cart.ecom_proj.config;
 
+import com.cart.ecom_proj.security.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -9,9 +10,18 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    public SecurityConfig(
+            JwtAuthenticationFilter jwtAuthenticationFilter
+    ) {
+        this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+    }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -29,29 +39,43 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(
             HttpSecurity http
-    ) throws Exception {
+    ) throws Exception {http
+    .csrf(csrf -> csrf.disable())
 
-        http
-                .csrf(csrf -> csrf.disable())
+    .sessionManagement(session ->
+            session.sessionCreationPolicy(
+                    SessionCreationPolicy.STATELESS
+            )
+    )
 
-                .sessionManagement(session ->
-                        session.sessionCreationPolicy(
-                                SessionCreationPolicy.STATELESS
-                        )
-                )
+    .authorizeHttpRequests(auth -> auth
 
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/auth/**"
-                        ).permitAll()
+            .requestMatchers("/api/auth/**")
+            .permitAll()
 
-                        .requestMatchers(
-                                "/api/products/**",
-                                "/api/product/**"
-                        ).permitAll()
+            .requestMatchers(
+                    "/api/products/**",
+                    "/api/product/**"
+            )
+            .permitAll()
 
-                        .anyRequest().authenticated()
-                );
+            .requestMatchers("/api/admin/**")
+            .hasRole("ADMIN")
+
+            .requestMatchers("/api/vendor/**")
+            .hasRole("VENDOR")
+
+            .requestMatchers("/api/customer/**")
+            .hasRole("CUSTOMER")
+
+            .anyRequest()
+            .authenticated()
+    )
+
+    .addFilterBefore(
+            jwtAuthenticationFilter,
+            UsernamePasswordAuthenticationFilter.class
+    );
 
         return http.build();
     }

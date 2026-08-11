@@ -1,5 +1,7 @@
 package com.cart.ecom_proj.controller;
 
+import com.cart.ecom_proj.dto.AuthResponse;
+import com.cart.ecom_proj.dto.LoginRequest;
 import com.cart.ecom_proj.dto.RegisterRequest;
 import com.cart.ecom_proj.model.User;
 import com.cart.ecom_proj.service.AuthService;
@@ -39,4 +41,26 @@ public class AuthController {
                     .body(e.getMessage());
         }
     }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(
+            @Valid @RequestBody LoginRequest request
+    ) {
+
+        try {
+
+            AuthResponse response =
+                    authService.login(request);
+
+            return ResponseEntity.ok(response);
+
+        } catch (Exception e) {
+
+            return ResponseEntity
+                    .status(HttpStatus.UNAUTHORIZED)
+                    .body("Invalid email or password");
+        }
+    }
+
+    
 }
