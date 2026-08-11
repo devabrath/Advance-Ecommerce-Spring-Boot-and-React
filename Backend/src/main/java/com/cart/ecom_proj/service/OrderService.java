@@ -221,7 +221,19 @@ public class OrderService {
 
         return toResponse(savedOrder);
     }
+    public List<OrderResponse> getMyOrders(String email) {
 
+    User user = userRepository.findByEmail(email)
+            .orElseThrow(() ->
+                    new RuntimeException("User not found")
+            );
+
+    return orderRepository
+            .findByUserOrderByCreatedAtDesc(user)
+            .stream()
+            .map(this::toResponse)
+            .toList();
+}
     private OrderResponse toResponse(Order order) {
 
         List<OrderItemResponse> items =
