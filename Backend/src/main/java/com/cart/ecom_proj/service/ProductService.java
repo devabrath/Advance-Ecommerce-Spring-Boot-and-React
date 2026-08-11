@@ -1,5 +1,6 @@
 package com.cart.ecom_proj.service;
 
+import com.cart.ecom_proj.dto.ProductResponse;
 import com.cart.ecom_proj.model.Product;
 import com.cart.ecom_proj.repo.ProductRepo;
 import org.springframework.stereotype.Service;
@@ -17,12 +18,19 @@ public class ProductService {
         this.productRepo = productRepo;
     }
 
-    public List<Product> getAllProducts() {
-        return productRepo.findAll();
+    public List<ProductResponse> getAllProducts() {
+
+        return productRepo.findAll()
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
-    public Product getProductById(Long id) {
-        return productRepo.findById(id).orElse(null);
+    public ProductResponse getProductById(Long id) {
+
+        return productRepo.findById(id)
+                .map(this::toResponse)
+                .orElse(null);
     }
 
     public Product addProduct(
@@ -31,6 +39,7 @@ public class ProductService {
     ) throws IOException {
 
         if (imageFile != null && !imageFile.isEmpty()) {
+
             product.setImageName(
                     imageFile.getOriginalFilename()
             );
@@ -97,7 +106,51 @@ public class ProductService {
         productRepo.deleteById(id);
     }
 
-    public List<Product> searchProducts(String keyword) {
-        return productRepo.searchProducts(keyword);
+    public List<ProductResponse> searchProducts(
+            String keyword
+    ) {
+
+        return productRepo.searchProducts(keyword)
+                .stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    private ProductResponse toResponse(Product product) {
+
+        Long categoryId = null;
+        String categoryName = null;
+
+        if (product.getCategory() != null) {
+            categoryId = product.getCategory().getId();
+            categoryName = product.getCategory().getName();
+        }
+
+        Long vendorId = null;
+        String shopName = null;
+
+        if (product.getVendor() != null) {
+            vendorId = product.getVendor().getId();
+            shopName = product.getVendor().getShopName();
+        }
+
+        return new ProductResponse(
+                product.getId(),
+                product.getName(),
+                product.getDescription(),
+                product.getBrand(),
+                product.getPrice(),
+                categoryId,
+                categoryName,
+                vendorId,
+                shopName,
+                product.getReleaseDate(),
+                product.isProductAvailable(),
+                product.getStockQuantity(),
+                product.getImageName(),
+                product.getImageType(),
+                product.getCreatedAt(),
+                product.getUpdatedAt()
+        );
     }
 }

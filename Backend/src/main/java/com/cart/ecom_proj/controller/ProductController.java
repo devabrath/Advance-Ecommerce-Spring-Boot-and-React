@@ -1,5 +1,6 @@
 package com.cart.ecom_proj.controller;
 
+import com.cart.ecom_proj.dto.ProductResponse;
 import com.cart.ecom_proj.model.Product;
 import com.cart.ecom_proj.service.ProductService;
 import org.springframework.http.HttpStatus;
@@ -23,7 +24,7 @@ public class ProductController {
     }
 
     @GetMapping("/products")
-    public ResponseEntity<List<Product>> getAllProducts() {
+    public ResponseEntity<List<ProductResponse>> getAllProducts() {
 
         return ResponseEntity.ok(
                 productService.getAllProducts()
@@ -31,11 +32,11 @@ public class ProductController {
     }
 
     @GetMapping("/product/{id}")
-    public ResponseEntity<Product> getProduct(
+    public ResponseEntity<ProductResponse> getProduct(
             @PathVariable Long id
     ) {
 
-        Product product =
+        ProductResponse product =
                 productService.getProductById(id);
 
         if (product == null) {
@@ -51,7 +52,10 @@ public class ProductController {
     )
     public ResponseEntity<?> addProduct(
             @RequestPart("product") Product product,
-            @RequestPart("imageFile")
+            @RequestPart(
+                    value = "imageFile",
+                    required = false
+            )
             MultipartFile imageFile
     ) {
 
@@ -65,7 +69,7 @@ public class ProductController {
 
             return ResponseEntity
                     .status(HttpStatus.CREATED)
-                    .body(savedProduct);
+                    .body(savedProduct.getId());
 
         } catch (IOException e) {
 
@@ -80,32 +84,20 @@ public class ProductController {
             @PathVariable Long productId
     ) {
 
-        Product product =
+        ProductResponse product =
                 productService.getProductById(productId);
 
         if (product == null
-                || product.getImageData() == null) {
+                || product.getImageName() == null) {
 
             return ResponseEntity.notFound().build();
         }
 
-        MediaType mediaType =
-                MediaType.APPLICATION_OCTET_STREAM;
-
-        if (product.getImageType() != null) {
-
-            try {
-                mediaType =
-                        MediaType.parseMediaType(
-                                product.getImageType()
-                        );
-            } catch (Exception ignored) {
-            }
-        }
-
-        return ResponseEntity.ok()
-                .contentType(mediaType)
-                .body(product.getImageData());
+        // Image retrieval will be moved to a dedicated
+        // image service in the next cleanup.
+        return ResponseEntity
+                .status(HttpStatus.NOT_IMPLEMENTED)
+                .build();
     }
 
     @PutMapping(
@@ -132,12 +124,12 @@ public class ProductController {
                     );
 
             if (updatedProduct == null) {
-                return ResponseEntity
-                        .notFound()
-                        .build();
+                return ResponseEntity.notFound().build();
             }
 
-            return ResponseEntity.ok(updatedProduct);
+            return ResponseEntity.ok(
+                    updatedProduct.getId()
+            );
 
         } catch (IOException e) {
 
@@ -152,7 +144,7 @@ public class ProductController {
             @PathVariable Long id
     ) {
 
-        Product product =
+        ProductResponse product =
                 productService.getProductById(id);
 
         if (product == null) {
@@ -163,11 +155,13 @@ public class ProductController {
 
         productService.deleteProduct(id);
 
-        return ResponseEntity.ok("Product deleted successfully");
+        return ResponseEntity.ok(
+                "Product deleted successfully"
+        );
     }
 
     @GetMapping("/products/search")
-    public ResponseEntity<List<Product>> searchProducts(
+    public ResponseEntity<List<ProductResponse>> searchProducts(
             @RequestParam String keyword
     ) {
 
