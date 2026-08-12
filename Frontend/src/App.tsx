@@ -25,6 +25,10 @@ import VendorLayout from "./layouts/VendorLayout";
 import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminProducts from "./pages/AdminProducts";
+import AdminAddProduct from "./pages/AdminAddProduct";
+import AdminVendors from "./pages/AdminVendors";
+import AdminCustomers from "./pages/AdminCustomers";
+import AdminCategories from "./pages/AdminCategories";
 
 import {
     BrowserRouter,
@@ -251,8 +255,8 @@ function App() {
                                     <UpdateProduct />
                                 </ProtectedRoute>
                             }
-                            />
-                            <Route
+                        />
+                        <Route
                             element={
                                 <ProtectedRoute
                                     allowedRoles={["ADMIN"]}
@@ -260,21 +264,39 @@ function App() {
                                     <AdminLayout />
                                 </ProtectedRoute>
                             }
-                            >
+                        >
 
                             
 
-                            <Route
-                                path="/admin/dashboard"
-                                element={
-                                    <AdminDashboard />
-                                }
-                            />
+                                    <Route
+                                        path="/admin/dashboard"
+                                        element={<AdminDashboard />}
+                                    />
 
-                            <Route
-        path="/admin/products"
-        element={<AdminProducts />}
-    />
+                                    <Route
+                                        path="/admin/products"
+                                        element={<AdminProducts />}
+                                    />
+
+                                    <Route
+                                        path="/admin/products/add"
+                                        element={<AdminAddProduct />}
+                                    />
+
+                                    <Route
+                                        path="/admin/vendors"
+                                        element={<AdminVendors />}
+                                    />
+
+                                    <Route
+                                        path="/admin/customers"
+                                        element={<AdminCustomers />}
+                                    />
+
+                                    <Route
+                                        path="/admin/categories"
+                                        element={<AdminCategories />}
+                                    />  
 
                         </Route>
                         

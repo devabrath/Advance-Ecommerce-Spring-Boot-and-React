@@ -157,7 +157,7 @@ const AdminProducts = () => {
             )}
 
 
-            <div className="card shadow-sm">
+            <div className="card shadow-sm" style={{width: "auto"}}>
 
                 <div className="table-responsive">
 

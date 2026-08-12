@@ -1,103 +1,28 @@
 import React from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
-import { useAuth } from "../Context/AuthContext";
+import { Outlet } from "react-router-dom";
+
+import AdminSidebar from "../components/AdminSidebar";
 
 const AdminLayout = () => {
 
-    const navigate = useNavigate();
-    const { logout } = useAuth();
-
-    const handleLogout = () => {
-
-        logout();
-
-        navigate("/login");
-    };
-
     return (
 
-        <div className="admin-layout">
+        <div
+            style={{
+                minHeight: "100vh",
+                backgroundColor: "#f8fafc"
+            }}
+        >
 
-            {/* SIDEBAR */}
+            <AdminSidebar />
 
-            <aside className="admin-sidebar">
-
-                <div className="admin-logo">
-                    Dunique
-                    <span>Admin</span>
-                </div>
-
-
-                <nav className="admin-nav">
-
-                    <NavLink
-                        to="/admin/dashboard"
-                    >
-                        Dashboard
-                    </NavLink>
-
-
-                    <NavLink
-                        to="/admin/products"
-                    >
-                        Products
-                    </NavLink>
-
-
-                    <NavLink
-                        to="/admin/orders"
-                    >
-                        Orders
-                    </NavLink>
-
-
-                    <NavLink
-                        to="/admin/customers"
-                    >
-                        Customers
-                    </NavLink>
-
-
-                    <NavLink
-                        to="/admin/vendors"
-                    >
-                        Vendors
-                    </NavLink>
-
-
-                    <NavLink
-                        to="/admin/categories"
-                    >
-                        Categories
-                    </NavLink>
-
-
-                    <NavLink
-                        to="/admin/profile"
-                    >
-                        Profile
-                    </NavLink>
-
-                </nav>
-
-
-                <div className="admin-sidebar-bottom">
-
-                    <button
-                        type="button"
-                        onClick={handleLogout}
-                    >
-                        Logout
-                    </button>
-
-                </div>
-
-            </aside>
-
-
-            {/* MAIN CONTENT */}
-
-            <main className="admin-main">
+            <main
+                style={{
+                    marginLeft: "250px",
+                    minHeight: "100vh",
+                    padding: "1px 30px"
+                }}
+            >
 
                 <Outlet />
 
