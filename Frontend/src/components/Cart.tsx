@@ -257,106 +257,136 @@ const Cart: React.FC = () => {
         setCartItems(newCartItems);
     };
 
-    const handleCheckout = async (): Promise<void> => {
+    // const handleCheckout = async (): Promise<void> => {
 
-        try {
+    //     try {
 
-            /*
-             * This preserves your existing
-             * product-stock update logic.
-             *
-             * Your newer backend has a proper
-             * /customer/orders/checkout endpoint,
-             * so we'll replace this later with
-             * the real order checkout flow.
-             */
+    //         /*
+    //          * This preserves your existing
+    //          * product-stock update logic.
+    //          *
+    //          * Your newer backend has a proper
+    //          * /customer/orders/checkout endpoint,
+    //          * so we'll replace this later with
+    //          * the real order checkout flow.
+    //          */
 
-            for (const item of cartItems) {
+    //         for (const item of cartItems) {
 
-                const {
-                    imageUrl,
-                    imageName,
-                    imageType,
-                    quantity,
-                    ...rest
-                } = item;
+    //             const {
+    //                 imageUrl,
+    //                 imageName,
+    //                 imageType,
+    //                 quantity,
+    //                 ...rest
+    //             } = item;
 
-                const updatedStockQuantity =
-                    item.stockQuantity -
-                    quantity;
+    //             const updatedStockQuantity =
+    //                 item.stockQuantity -
+    //                 quantity;
 
-                const updatedProductData = {
-                    ...rest,
-                    stockQuantity:
-                        updatedStockQuantity
-                };
+    //             const updatedProductData = {
+    //                 ...rest,
+    //                 stockQuantity:
+    //                     updatedStockQuantity
+    //             };
 
-                console.log(
-                    "Updated product data",
-                    updatedProductData
-                );
+    //             console.log(
+    //                 "Updated product data",
+    //                 updatedProductData
+    //             );
 
-                const cartProduct =
-                    new FormData();
+    //             const cartProduct =
+    //                 new FormData();
 
-                if (cartImage) {
+    //             if (cartImage) {
 
-                    cartProduct.append(
-                        "imageFile",
-                        cartImage
-                    );
-                }
+    //                 cartProduct.append(
+    //                     "imageFile",
+    //                     cartImage
+    //                 );
+    //             }
 
-                cartProduct.append(
-                    "product",
-                    new Blob(
-                        [
-                            JSON.stringify(
-                                updatedProductData
-                            )
-                        ],
-                        {
-                            type:
-                                "application/json"
-                        }
-                    )
-                );
+    //             cartProduct.append(
+    //                 "product",
+    //                 new Blob(
+    //                     [
+    //                         JSON.stringify(
+    //                             updatedProductData
+    //                         )
+    //                     ],
+    //                     {
+    //                         type:
+    //                             "application/json"
+    //                     }
+    //                 )
+    //             );
 
-                try {
+    //             try {
 
-                    await API.put(
-                        `/product/${item.id}`,
-                        cartProduct
-                    );
+    //                 await API.put(
+    //                     `/product/${item.id}`,
+    //                     cartProduct
+    //                 );
 
-                    console.log(
-                        "Product updated successfully"
-                    );
+    //                 console.log(
+    //                     "Product updated successfully"
+    //                 );
 
-                } catch (error) {
+    //             } catch (error) {
 
-                    console.error(
-                        "Error updating product:",
-                        error
-                    );
-                }
+    //                 console.error(
+    //                     "Error updating product:",
+    //                     error
+    //                 );
+    //             }
+    //         }
+
+    //         clearCart();
+
+    //         setCartItems([]);
+
+    //         setShowModal(false);
+
+    //     } catch (error) {
+
+    //         console.error(
+    //             "Error during checkout:",
+    //             error
+    //         );
+    //     }
+    // };
+    const handleCheckout = async (addressId: number) => {
+
+    try {
+
+        await API.post(
+            "/customer/orders/checkout",
+            {
+                addressId: addressId
             }
+        );
 
-            clearCart();
+        clearCart();
 
-            setCartItems([]);
+        setCartItems([]);
 
-            setShowModal(false);
+        setShowModal(false);
 
-        } catch (error) {
+        alert("Order placed successfully!");
 
-            console.error(
-                "Error during checkout:",
-                error
-            );
-        }
-    };
+    } catch (error) {
 
+        console.error(
+            "Checkout failed:",
+            error
+        );
+
+        alert(
+            "Checkout failed. Please try again."
+        );
+    }
+};
     return (
         <div className="cart-container">
 

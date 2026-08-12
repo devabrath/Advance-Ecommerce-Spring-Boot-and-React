@@ -1,5 +1,7 @@
 import "./App.css";
+
 import { useState } from "react";
+
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 
@@ -9,18 +11,26 @@ import Cart from "./components/Cart";
 import AddProduct from "./components/AddProduct";
 import Product from "./components/Product";
 import UpdateProduct from "./components/UpdateProduct";
+import ProtectedRoute from "./components/ProtectedRoute";
 
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import {
+    BrowserRouter,
+    Routes,
+    Route
+} from "react-router-dom";
 
 import { AppProvider } from "./Context/Context";
+import { AuthProvider } from "./Context/AuthContext";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
+
 
 function App() {
 
     const [selectedCategory, setSelectedCategory] =
         useState<string>("");
+
 
     const handleCategorySelect = (
         category: string
@@ -34,72 +44,89 @@ function App() {
         );
     };
 
+
     return (
-        <AppProvider>
 
-            <BrowserRouter>
+        <AuthProvider>
 
-                <Navbar
-                    onSelectCategory={
-                        handleCategorySelect
-                    }
-                />
+            <AppProvider>
 
-                <Routes>
+                <BrowserRouter>
 
-                    <Route
-                        path="/login"
-                        element={<Login />}
-                    />
-
-                    <Route
-                        path="/register"
-                        element={<Register />}
-                    />
-
-                    <Route
-                        path="/"
-                        element={
-                            <Home
-                                selectedCategory={
-                                    selectedCategory
-                                }
-                            />
+                    <Navbar
+                        onSelectCategory={
+                            handleCategorySelect
                         }
                     />
 
-                    <Route
-                        path="/add_product"
-                        element={<AddProduct />}
-                    />
+                    <Routes>
 
-                    <Route
-                        path="/product"
-                        element={<Product />}
-                    />
+                        {/* ========================= */}
+                        {/* PUBLIC PAGES */}
+                        {/* ========================= */}
 
-                    <Route
-                        path="/product/:id"
-                        element={<Product />}
-                    />
+                        <Route
+                            path="/"
+                            element={
+                                <Home
+                                    selectedCategory={
+                                        selectedCategory
+                                    }
+                                />
+                            }
+                        />
 
-                    <Route
-                        path="/cart"
-                        element={<Cart />}
-                    />
+                        <Route
+                            path="/login"
+                            element={<Login />}
+                        />
 
-                    <Route
-                        path="/product/update/:id"
-                        element={
-                            <UpdateProduct />
-                        }
-                    />
+                        <Route
+                            path="/register"
+                            element={<Register />}
+                        />
 
-                </Routes>
+                        <Route
+                            path="/product/:id"
+                            element={<Product />}
+                        />
 
-            </BrowserRouter>
 
-        </AppProvider>
+                        {/* ========================= */}
+                        {/* TEMPORARILY PUBLIC */}
+                        {/* ========================= */}
+
+                        <Route
+                            path="/cart"
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={["CUSTOMER"]}
+                                >
+                                    <Cart />
+                                </ProtectedRoute>
+                            }
+                        />
+
+                        <Route
+                            path="/add_product"
+                            element={<AddProduct />}
+                        />
+
+                        <Route
+                            path="/product/update/:id"
+                            element={
+                                <UpdateProduct />
+                            }
+                        />
+
+                    </Routes>
+
+                </BrowserRouter>
+
+            </AppProvider>
+
+        </AuthProvider>
+
     );
 }
 

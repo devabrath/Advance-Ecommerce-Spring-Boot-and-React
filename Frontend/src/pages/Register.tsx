@@ -99,7 +99,9 @@ const Register = () => {
             }}
         >
 
-            <div className="card shadow p-4">
+            <div className="card shadow p-4" style={{
+                width: "auto",
+            }}>
 
                 <h2
                     className="text-center mb-4"

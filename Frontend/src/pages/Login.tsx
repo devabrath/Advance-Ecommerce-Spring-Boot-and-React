@@ -1,6 +1,12 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import {
+    Link,
+    useNavigate
+} from "react-router-dom";
+
 import API from "../axios";
+import { useAuth } from "../Context/AuthContext";
+
 
 interface AuthResponse {
     token: string;
@@ -13,6 +19,9 @@ interface AuthResponse {
 const Login = () => {
 
     const navigate = useNavigate();
+
+    const { login } = useAuth();
+    
 
     const [email, setEmail] =
         useState<string>("");
@@ -37,41 +46,60 @@ const Login = () => {
 
         try {
 
-            const response =
-                await API.post<AuthResponse>(
-                    "/auth/login",
-                    {
-                        email,
-                        password
-                    }
-                );
+            // const response =
+            //     await API.post<AuthResponse>(
+            //         "/auth/login",
+            //         {
+            //             email,
+            //             password
+            //         }
+            //     );
 
-            const authData =
-                response.data;
+            // const authData =
+            //     response.data;
 
-            localStorage.setItem(
-                "token",
-                authData.token
-            );
+            // // login(authData);
+            // localStorage.setItem(
+            //     "token",
+            //     authData.token
+            // );
 
-            localStorage.setItem(
-                "user",
-                JSON.stringify(authData)
-            );
+            //     localStorage.setItem(
+            //         "user",
+            //         JSON.stringify(authData)
+            //     );
 
-            API.defaults.headers.common[
-                "Authorization"
-            ] = `Bearer ${authData.token}`;
-
-            if (authData.role === "ADMIN") {
-                navigate("/admin");
-            } else if (
-                authData.role === "VENDOR"
-            ) {
-                navigate("/vendor");
-            } else {
-                navigate("/");
+            //         API.defaults.headers.common[
+            //             "Authorization"
+            //         ] = `Bearer ${authData.token}`;
+                    const response = await API.post(
+            "/auth/login",
+            {
+                email,
+                password
             }
+        );
+
+        const authData = response.data;
+
+        login(authData);
+
+        // navigate("/");
+
+                                if (authData.role === "ADMIN") {
+
+                                    navigate("/admin");
+
+                                } else if (
+                                    authData.role === "VENDOR"
+                                ) {
+
+                                    navigate("/vendor");
+
+                                } else {
+
+                                    navigate("/");
+                                }
 
         } catch (error: any) {
 
@@ -100,11 +128,11 @@ const Login = () => {
             }}
         >
 
-            <div className="card shadow p-4">
+            <div className="card shadow p-4"style={{
+                width: "auto",
+            }}>
 
-                <h2
-                    className="text-center mb-4"
-                >
+                <h2 className="text-center mb-4">
                     Login
                 </h2>
 

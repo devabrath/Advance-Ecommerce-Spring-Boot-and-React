@@ -1,18 +1,42 @@
 import React, { useEffect, useState } from "react";
-import API from "../axios";
-import type { Product } from "../Context/Context";
+import {
+    Link,
+    useNavigate
+} from "react-router-dom";
+import { useAppContext } from "../Context/Context";
+import axios from "axios";
+
+import { useAuth } from "../Context/AuthContext";
 
 interface NavbarProps {
     onSelectCategory: (category: string) => void;
-    onSearch?: (value: string) => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({
-    onSelectCategory,
-    onSearch
-}) => {
+const Navbar = ({
+    onSelectCategory
+}: NavbarProps) => {
 
-    const getInitialTheme = (): string => {
+    // =========================
+    // AUTH
+    // =========================
+
+    const navigate = useNavigate();
+
+    const {
+    user,
+    isAuthenticated,
+    logout
+} = useAuth();
+
+const { clearCart } = useAppContext();
+
+
+    // =========================
+    // THEME
+    // =========================
+
+    const getInitialTheme = () => {
+
         const storedTheme =
             localStorage.getItem("theme");
 
@@ -21,26 +45,46 @@ const Navbar: React.FC<NavbarProps> = ({
             : "light-theme";
     };
 
-    const [selectedCategory, setSelectedCategory] =
-        useState<string>("");
-
     const [theme, setTheme] =
-        useState<string>(getInitialTheme);
+        useState<string>(
+            getInitialTheme()
+        );
+
+
+    // =========================
+    // SEARCH
+    // =========================
 
     const [input, setInput] =
         useState<string>("");
 
     const [searchResults, setSearchResults] =
-        useState<Product[]>([]);
+        useState<any[]>([]);
 
     const [noResults, setNoResults] =
         useState<boolean>(false);
 
-    const [searchFocused, setSearchFocused] =
-        useState<boolean>(false);
-
     const [showSearchResults, setShowSearchResults] =
         useState<boolean>(false);
+
+
+    // =========================
+    // CATEGORIES
+    // =========================
+
+    const categories = [
+        "Laptop",
+        "Headphone",
+        "Mobile",
+        "Electronics",
+        "Toys",
+        "Fashion"
+    ];
+
+
+    // =========================
+    // LOAD PRODUCTS
+    // =========================
 
     useEffect(() => {
 
@@ -48,31 +92,38 @@ const Navbar: React.FC<NavbarProps> = ({
 
     }, []);
 
-    const fetchData = async (): Promise<void> => {
+
+    const fetchData = async () => {
 
         try {
 
             const response =
-                await API.get<Product[]>(
-                    "/products"
+                await axios.get(
+                    "http://localhost:8080/api/products"
                 );
 
-            setSearchResults(response.data);
-
-            console.log(response.data);
+            setSearchResults(
+                response.data
+            );
 
         } catch (error) {
 
             console.error(
-                "Error fetching data:",
+                "Error fetching products:",
                 error
             );
+
         }
     };
 
+
+    // =========================
+    // SEARCH
+    // =========================
+
     const handleChange = async (
         value: string
-    ): Promise<void> => {
+    ) => {
 
         setInput(value);
 
@@ -83,19 +134,17 @@ const Navbar: React.FC<NavbarProps> = ({
             try {
 
                 const response =
-                    await API.get<Product[]>(
-                        `/products/search?keyword=${encodeURIComponent(
-                            value
-                        )}`
+                    await axios.get(
+                        `http://localhost:8080/api/products/search?keyword=${encodeURIComponent(value)}`
                     );
 
-                setSearchResults(response.data);
+                setSearchResults(
+                    response.data
+                );
 
                 setNoResults(
                     response.data.length === 0
                 );
-
-                console.log(response.data);
 
             } catch (error) {
 
@@ -103,6 +152,10 @@ const Navbar: React.FC<NavbarProps> = ({
                     "Error searching:",
                     error
                 );
+
+                setSearchResults([]);
+
+                setNoResults(true);
             }
 
         } else {
@@ -113,22 +166,26 @@ const Navbar: React.FC<NavbarProps> = ({
 
             setNoResults(false);
         }
-
-        if (onSearch) {
-            onSearch(value);
-        }
     };
+
+
+    // =========================
+    // CATEGORY
+    // =========================
 
     const handleCategorySelect = (
         category: string
-    ): void => {
-
-        setSelectedCategory(category);
+    ) => {
 
         onSelectCategory(category);
     };
 
-    const toggleTheme = (): void => {
+
+    // =========================
+    // THEME
+    // =========================
+
+    const toggleTheme = () => {
 
         const newTheme =
             theme === "dark-theme"
@@ -143,124 +200,156 @@ const Navbar: React.FC<NavbarProps> = ({
         );
     };
 
+
     useEffect(() => {
 
-        document.body.className = theme;
+        document.body.className =
+            theme;
 
     }, [theme]);
 
-    const categories: string[] = [
-        "Laptop",
-        "Headphone",
-        "Mobile",
-        "Electronics",
-        "Toys",
-        "Fashion"
-    ];
+
+    // =========================
+    // LOGOUT
+    // =========================
+
+    const handleLogout = () => {
+
+    clearCart();
+
+    localStorage.removeItem("cart");
+
+    logout();
+
+    navigate("/login");
+};
+
+
+    // =========================
+    // UI
+    // =========================
 
     return (
-        <>
-            <header>
 
-                <nav className="navbar navbar-expand-lg fixed-top">
+        <header>
 
-                    <div className="container-fluid">
+            <nav className="navbar navbar-expand-lg fixed-top">
 
-                        <a
-                            className="navbar-brand"
-                            href="https://www.linkedin.com/in/harish-kumar-gatti-663066249/"
-                        >
-                            HiTeckKart
-                        </a>
+                <div className="container-fluid">
 
-                        <button
-                            className="navbar-toggler"
-                            type="button"
-                            data-bs-toggle="collapse"
-                            data-bs-target="#navbarSupportedContent"
-                            aria-controls="navbarSupportedContent"
-                            aria-expanded="false"
-                            aria-label="Toggle navigation"
-                        >
-                            <span className="navbar-toggler-icon"></span>
-                        </button>
 
-                        <div
-                            className="collapse navbar-collapse"
-                            id="navbarSupportedContent"
-                        >
+                    {/* BRAND */}
 
-                            <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+                    <Link
+                        className="navbar-brand"
+                        to="/"
+                    >
+                        Dunique Shopping 🛒
+                    </Link>
 
-                                <li className="nav-item">
 
-                                    <a
-                                        className="nav-link active"
-                                        aria-current="page"
-                                        href="/"
-                                    >
-                                        Home
-                                    </a>
+                    {/* MOBILE MENU BUTTON */}
 
-                                </li>
+                    <button
+                        className="navbar-toggler"
+                        type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#navbarSupportedContent"
+                        aria-controls="navbarSupportedContent"
+                        aria-expanded="false"
+                        aria-label="Toggle navigation"
+                    >
 
-                                <li className="nav-item">
+                        <span className="navbar-toggler-icon"></span>
 
-                                    <a
-                                        className="nav-link"
-                                        href="/add_product"
-                                    >
-                                        Add Product
-                                    </a>
+                    </button>
 
-                                </li>
 
-                                <li className="nav-item dropdown">
+                    <div
+                        className="collapse navbar-collapse"
+                        id="navbarSupportedContent"
+                    >
 
-                                    <a
-                                        className="nav-link dropdown-toggle"
-                                        href="/"
-                                        role="button"
-                                        data-bs-toggle="dropdown"
-                                        aria-expanded="false"
-                                    >
-                                        Categories
-                                    </a>
 
-                                    <ul className="dropdown-menu">
+                        {/* ========================= */}
+                        {/* LEFT MENU */}
+                        {/* ========================= */}
 
-                                        {categories.map(
-                                            (category) => (
+                        <ul className="navbar-nav me-auto mb-2 mb-lg-0">
 
-                                                <li
-                                                    key={
-                                                        category
+
+                            {/* HOME */}
+
+                            <li className="nav-item">
+
+                                <Link
+                                    className="nav-link active"
+                                    to="/"
+                                >
+                                    Home
+                                </Link>
+
+                            </li>
+
+
+                            {/* CATEGORIES */}
+
+                            <li className="nav-item dropdown">
+
+                                <button
+                                    className="nav-link dropdown-toggle btn btn-link"
+                                    type="button"
+                                    data-bs-toggle="dropdown"
+                                    aria-expanded="false"
+                                >
+                                    Categories
+                                </button>
+
+
+                                <ul className="dropdown-menu">
+
+                                    {categories.map(
+                                        (category) => (
+
+                                            <li
+                                                key={category}
+                                            >
+
+                                                <button
+                                                    className="dropdown-item"
+                                                    onClick={() =>
+                                                        handleCategorySelect(
+                                                            category
+                                                        )
                                                     }
                                                 >
+                                                    {category}
+                                                </button>
 
-                                                    <button
-                                                        className="dropdown-item"
-                                                        onClick={() =>
-                                                            handleCategorySelect(
-                                                                category
-                                                            )
-                                                        }
-                                                    >
-                                                        {category}
-                                                    </button>
+                                            </li>
 
-                                                </li>
-                                            )
-                                        )}
+                                        )
+                                    )}
 
-                                    </ul>
+                                </ul>
 
-                                </li>
+                            </li>
 
-                            </ul>
+                        </ul>
+
+
+                        {/* ========================= */}
+                        {/* RIGHT SIDE */}
+                        {/* ========================= */}
+
+                        <div className="d-flex align-items-center gap-2">
+
+
+                            {/* THEME */}
 
                             <button
                                 className="theme-btn"
+                                type="button"
                                 onClick={
                                     toggleTheme
                                 }
@@ -279,29 +368,90 @@ const Navbar: React.FC<NavbarProps> = ({
 
                             </button>
 
-                            <div className="d-flex align-items-center cart">
 
-                                <a
-                                    href="/cart"
-                                    className="nav-link text-dark"
-                                >
+                            {/* CART */}
 
-                                    <i
-                                        className="bi bi-cart me-2"
+                            <Link
+                                to="/cart"
+                                className="nav-link"
+                            >
+
+                                <i className="bi bi-cart me-2">
+                                    Cart
+                                </i>
+
+                            </Link>
+
+
+                            {/* ========================= */}
+                            {/* AUTH */}
+                            {/* ========================= */}
+
+                            {isAuthenticated ? (
+
+                                <>
+
+                                    <span
+                                        className="nav-link"
                                         style={{
-                                            display:
-                                                "flex",
-                                            alignItems:
-                                                "center"
+                                            whiteSpace:
+                                                "nowrap"
                                         }}
                                     >
-                                        Cart
-                                    </i>
+                                        Hi,{" "}
+                                        {user?.firstName}
+                                    </span>
 
-                                </a>
+
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline-danger"
+                                        onClick={
+                                            handleLogout
+                                        }
+                                    >
+                                        Logout
+                                    </button>
+
+                                </>
+
+                            ) : (
+
+                                <>
+
+                                    <Link
+                                        className="btn btn-outline-primary"
+                                        to="/login"
+                                    >
+                                        Login
+                                    </Link>
+
+
+                                    <Link
+                                        className="btn btn-primary"
+                                        to="/register"
+                                    >
+                                        Register
+                                    </Link>
+
+                                </>
+
+                            )}
+
+
+                            {/* ========================= */}
+                            {/* SEARCH */}
+                            {/* ========================= */}
+
+                            <div
+                                style={{
+                                    position:
+                                        "relative"
+                                }}
+                            >
 
                                 <input
-                                    className="form-control me-2"
+                                    className="form-control"
                                     type="search"
                                     placeholder="Search"
                                     aria-label="Search"
@@ -311,21 +461,35 @@ const Navbar: React.FC<NavbarProps> = ({
                                             e.target.value
                                         )
                                     }
-                                    onFocus={() =>
-                                        setSearchFocused(
-                                            true
-                                        )
-                                    }
-                                    onBlur={() =>
-                                        setSearchFocused(
-                                            false
-                                        )
-                                    }
                                 />
+
 
                                 {showSearchResults && (
 
-                                    <ul className="list-group">
+                                    <ul
+                                        className="list-group"
+                                        style={{
+                                            position:
+                                                "absolute",
+
+                                            top:
+                                                "100%",
+
+                                            right: 0,
+
+                                            width:
+                                                "300px",
+
+                                            zIndex:
+                                                1000,
+
+                                            maxHeight:
+                                                "300px",
+
+                                            overflowY:
+                                                "auto"
+                                        }}
+                                    >
 
                                         {searchResults.length >
                                         0 ? (
@@ -340,20 +504,22 @@ const Navbar: React.FC<NavbarProps> = ({
                                                         className="list-group-item"
                                                     >
 
-                                                        <a
-                                                            href={`/product/${result.id}`}
+                                                        <Link
+                                                            to={`/product/${result.id}`}
                                                             className="search-result-link"
+                                                            onClick={() =>
+                                                                setShowSearchResults(
+                                                                    false
+                                                                )
+                                                            }
                                                         >
-
-                                                            <span>
-                                                                {
-                                                                    result.name
-                                                                }
-                                                            </span>
-
-                                                        </a>
+                                                            {
+                                                                result.name
+                                                            }
+                                                        </Link>
 
                                                     </li>
+
                                                 )
                                             )
 
@@ -361,19 +527,19 @@ const Navbar: React.FC<NavbarProps> = ({
 
                                             noResults && (
 
-                                                <p className="no-results-message">
-                                                    No Product with
-                                                    such Name
-                                                </p>
+                                                <li className="list-group-item">
+                                                    No Product
+                                                    with such
+                                                    Name
+                                                </li>
 
                                             )
+
                                         )}
 
                                     </ul>
 
                                 )}
-
-                                <div />
 
                             </div>
 
@@ -381,10 +547,11 @@ const Navbar: React.FC<NavbarProps> = ({
 
                     </div>
 
-                </nav>
+                </div>
 
-            </header>
-        </>
+            </nav>
+
+        </header>
     );
 };
 
