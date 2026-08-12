@@ -384,32 +384,79 @@ const Cart: React.FC = () => {
     //     }
     // };
     const handleCheckout = async (addressId: number) => {
-
     try {
 
-        await API.post(
+        console.log("========== CHECKOUT ==========");
+        console.log("Address ID:", addressId);
+        console.log("Cart Items:", cartItems);
+        console.log("Total:", totalPrice);
+
+        const response = await API.post(
             "/customer/orders/checkout",
             {
                 addressId: addressId
             }
         );
 
+        console.log(
+            "ORDER CREATED:",
+            response.data
+        );
+
+        alert(
+            `Order placed successfully!\nOrder ID: ${response.data.orderId}`
+        );
+
+        /*
+         * Backend already clears the database cart.
+         */
+
         clearCart();
 
         setCartItems([]);
 
+        setTotalPrice(0);
+
         setShowModal(false);
 
-        alert("Order placed successfully!");
+        /*
+         * Refresh frontend cart state too.
+         */
 
-    } catch (error) {
+        await refreshCart();
+
+    } catch (error: any) {
 
         console.error(
-            "Checkout failed:",
+            "========== CHECKOUT ERROR =========="
+        );
+
+        console.error(
+            "FULL ERROR:",
             error
         );
 
+        console.error(
+            "STATUS:",
+            error?.response?.status
+        );
+
+        console.error(
+            "RESPONSE:",
+            error?.response?.data
+        );
+
+        console.error(
+            "MESSAGE:",
+            error?.message
+        );
+
+        console.error(
+            "==============================="
+        );
+
         alert(
+            error?.response?.data ||
             "Checkout failed. Please try again."
         );
     }
