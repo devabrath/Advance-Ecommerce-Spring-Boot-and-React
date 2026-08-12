@@ -22,6 +22,10 @@ import VendorDashboard from "./pages/VendorDashboard";
 import VendorProducts from "./components/VendorProducts";
 import VendorLayout from "./layouts/VendorLayout";
 
+import AdminLayout from "./layouts/AdminLayout";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminProducts from "./pages/AdminProducts";
+
 import {
     BrowserRouter,
     Routes,
@@ -247,7 +251,33 @@ function App() {
                                     <UpdateProduct />
                                 </ProtectedRoute>
                             }
-                        />
+                            />
+                            <Route
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={["ADMIN"]}
+                                >
+                                    <AdminLayout />
+                                </ProtectedRoute>
+                            }
+                            >
+
+                            
+
+                            <Route
+                                path="/admin/dashboard"
+                                element={
+                                    <AdminDashboard />
+                                }
+                            />
+
+                            <Route
+        path="/admin/products"
+        element={<AdminProducts />}
+    />
+
+                        </Route>
+                        
 
 
                         {/* ================================= */}
