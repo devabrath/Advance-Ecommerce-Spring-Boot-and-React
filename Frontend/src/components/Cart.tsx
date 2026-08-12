@@ -25,10 +25,12 @@ const Cart: React.FC = () => {
     }
 
     const {
-        cart,
-        removeFromCart,
-        clearCart
-    } = context;
+    cart,
+    removeFromCart,
+    clearCart,
+    updateCartQuantity,
+    refreshCart
+} = useContext(AppContext);
 
     const [
         cartItems,
@@ -186,76 +188,101 @@ const Cart: React.FC = () => {
         );
     };
 
-    const handleIncreaseQuantity = (
-        itemId: number
-    ): void => {
+    const handleIncreaseQuantity = async (itemId: number) => {
 
-        const newCartItems =
-            cartItems.map((item) => {
+    try {
 
-                if (item.id === itemId) {
+        const item = cartItems.find(
+            (item) => item.id === itemId
+        );
 
-                    if (
-                        item.quantity <
-                        item.stockQuantity
-                    ) {
+        if (!item) {
+            console.error("Item not found:", itemId);
+            return;
+        }
 
-                        return {
-                            ...item,
-                            quantity:
-                                item.quantity + 1
-                        };
+        if (item.quantity >= item.stockQuantity) {
+            alert("Cannot add more than available stock");
+            return;
+        }
 
-                    } else {
+        await updateCartQuantity(
+            itemId,
+            item.quantity + 1
+        );
 
-                        alert(
-                            "Cannot add more than available stock"
-                        );
-                    }
-                }
+        await refreshCart();
 
-                return item;
-            });
+    } catch (error) {
 
-        setCartItems(newCartItems);
-    };
+        console.error(
+            "Error increasing quantity:",
+            error
+        );
 
-    const handleDecreaseQuantity = (
-        itemId: number
-    ): void => {
+    }
+};
 
-        const newCartItems =
-            cartItems.map((item) =>
+    const handleDecreaseQuantity = async (itemId: number) => {
 
-                item.id === itemId
-                    ? {
-                          ...item,
-                          quantity:
-                              Math.max(
-                                  item.quantity - 1,
-                                  1
-                              )
-                      }
-                    : item
-            );
+    try {
 
-        setCartItems(newCartItems);
-    };
+        const item = cartItems.find(
+            (item) => item.id === itemId
+        );
 
-    const handleRemoveFromCart = (
-        itemId: number
-    ): void => {
+        if (!item) {
+            return;
+        }
 
-        removeFromCart(itemId);
+        if (item.quantity <= 1) {
+            return;
+        }
 
-        const newCartItems =
-            cartItems.filter(
-                (item) =>
-                    item.id !== itemId
-            );
+        await updateCartQuantity(
+            itemId,
+            item.quantity - 1
+        );
 
-        setCartItems(newCartItems);
-    };
+        await refreshCart();
+
+    } catch (error) {
+
+        console.error(
+            "Error decreasing quantity:",
+            error
+        );
+
+    }
+};
+
+    const handleRemoveFromCart = async (
+    itemId: number
+) => {
+
+    try {
+
+        await removeFromCart(itemId);
+
+        await refreshCart();
+
+        setCartItems(
+            (currentItems) =>
+                currentItems.filter(
+                    (item) =>
+                        item.id !== itemId
+                )
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Error removing item:",
+            error
+        );
+
+    }
+};
 
     // const handleCheckout = async (): Promise<void> => {
 
