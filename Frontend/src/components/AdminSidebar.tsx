@@ -1,38 +1,64 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
 
-const AdminSidebar = () => {
+interface Props {
+    darkMode: boolean;
+    setDarkMode: (value: boolean) => void;
+}
+
+const AdminSidebar = ({
+    darkMode,
+    setDarkMode
+}: Props) => {
 
     const navigate = useNavigate();
     const { user, logout } = useAuth();
 
+
     const handleLogout = () => {
+
         logout();
+
         navigate("/login");
     };
+
 
     const linkStyle = ({
         isActive
     }: {
         isActive: boolean
     }) => ({
+
         display: "block",
-        padding: "10px 15px",
-        marginBottom: "4px",
+
+        padding: "11px 15px",
+
+        marginBottom: "5px",
+
         borderRadius: "8px",
+
         textDecoration: "none",
+
         color: isActive
             ? "#2563eb"
-            : "#374151",
+            : darkMode
+                ? "#d1d5db"
+                : "#374151",
+
         backgroundColor: isActive
-            ? "#eff6ff"
+            ? darkMode
+                ? "#172554"
+                : "#eff6ff"
             : "transparent",
+
         fontWeight: isActive
             ? "600"
             : "400",
+
         fontSize: "14px"
     });
+
 
     return (
 
@@ -43,10 +69,20 @@ const AdminSidebar = () => {
                 position: "fixed",
                 left: 0,
                 top: 0,
-                backgroundColor: "#ffffff",
-                borderRight: "1px solid #e5e7eb",
+
+                backgroundColor:
+                    darkMode
+                        ? "#111827"
+                        : "#ffffff",
+
+                borderRight:
+                    darkMode
+                        ? "1px solid #1f2937"
+                        : "1px solid #e5e7eb",
+
                 display: "flex",
                 flexDirection: "column",
+
                 zIndex: 1000
             }}
         >
@@ -56,7 +92,12 @@ const AdminSidebar = () => {
             <div
                 style={{
                     padding: "18px 20px",
-                    borderBottom: "1px solid #e5e7eb",
+
+                    borderBottom:
+                        darkMode
+                            ? "1px solid #1f2937"
+                            : "1px solid #e5e7eb",
+
                     flexShrink: 0
                 }}
             >
@@ -73,7 +114,10 @@ const AdminSidebar = () => {
 
                 <small
                     style={{
-                        color: "#6b7280"
+                        color:
+                            darkMode
+                                ? "#9ca3af"
+                                : "#6b7280"
                     }}
                 >
                     Admin Panel
@@ -87,7 +131,12 @@ const AdminSidebar = () => {
             <div
                 style={{
                     padding: "14px 20px",
-                    borderBottom: "1px solid #e5e7eb",
+
+                    borderBottom:
+                        darkMode
+                            ? "1px solid #1f2937"
+                            : "1px solid #e5e7eb",
+
                     flexShrink: 0
                 }}
             >
@@ -95,7 +144,12 @@ const AdminSidebar = () => {
                 <div
                     style={{
                         fontWeight: "600",
-                        fontSize: "14px"
+                        fontSize: "14px",
+
+                        color:
+                            darkMode
+                                ? "#f9fafb"
+                                : "#111827"
                     }}
                 >
                     Hello, {user?.firstName}
@@ -103,7 +157,10 @@ const AdminSidebar = () => {
 
                 <small
                     style={{
-                        color: "#6b7280"
+                        color:
+                            darkMode
+                                ? "#9ca3af"
+                                : "#6b7280"
                     }}
                 >
                     Administrator
@@ -112,11 +169,11 @@ const AdminSidebar = () => {
             </div>
 
 
-            {/* SCROLLABLE NAVIGATION */}
+            {/* NAVIGATION */}
 
             <nav
                 style={{
-                    padding: "12px 10px",
+                    padding: "15px 10px",
                     flex: 1,
                     overflowY: "auto",
                     minHeight: 0
@@ -130,28 +187,11 @@ const AdminSidebar = () => {
                     🏠 Dashboard
                 </NavLink>
 
-
                 <NavLink
-                    to="/admin/products"
+                    to="/admin/revenue"
                     style={linkStyle}
                 >
-                    📦 Products
-                </NavLink>
-
-
-                <NavLink
-                    to="/admin/products/add"
-                    style={linkStyle}
-                >
-                    ➕ Add Product
-                </NavLink>
-
-
-                <NavLink
-                    to="/admin/orders"
-                    style={linkStyle}
-                >
-                    🛒 Orders
+                    💰 Revenue
                 </NavLink>
 
 
@@ -159,7 +199,7 @@ const AdminSidebar = () => {
                     to="/admin/customers"
                     style={linkStyle}
                 >
-                    👥 Customers
+                    👥 Manage Customers
                 </NavLink>
 
 
@@ -167,36 +207,94 @@ const AdminSidebar = () => {
                     to="/admin/vendors"
                     style={linkStyle}
                 >
-                    🏪 Vendors
+                    🏪 Manage Vendors
                 </NavLink>
 
 
                 <NavLink
-                    to="/admin/categories"
+                    to="/admin/products"
                     style={linkStyle}
                 >
-                    🗂️ Categories
+                    📦 Manage Products
                 </NavLink>
 
 
                 <NavLink
-                    to="/admin/profile"
+                    to="/admin/orders"
                     style={linkStyle}
                 >
-                    👤 Profile
+                    🛒 Manage Orders
                 </NavLink>
+
 
             </nav>
 
 
-            {/* LOGOUT — ALWAYS VISIBLE */}
+            {/* THEME */}
 
             <div
                 style={{
                     padding: "10px",
-                    borderTop: "1px solid #e5e7eb",
-                    flexShrink: 0,
-                    backgroundColor: "#ffffff"
+
+                    borderTop:
+                        darkMode
+                            ? "1px solid #1f2937"
+                            : "1px solid #e5e7eb",
+
+                    flexShrink: 0
+                }}
+            >
+
+                <button
+                    type="button"
+                    onClick={() =>
+                        setDarkMode(!darkMode)
+                    }
+                    style={{
+                        width: "100%",
+                        border: "none",
+
+                        background:
+                            darkMode
+                                ? "#1f2937"
+                                : "#f3f4f6",
+
+                        color:
+                            darkMode
+                                ? "#f9fafb"
+                                : "#374151",
+
+                        textAlign: "left",
+
+                        padding: "10px 15px",
+
+                        borderRadius: "8px",
+
+                        cursor: "pointer",
+
+                        fontSize: "14px"
+                    }}
+                >
+                    {darkMode
+                        ? "☀️ Light Mode"
+                        : "🌙 Dark Mode"}
+                </button>
+
+            </div>
+
+
+            {/* LOGOUT */}
+
+            <div
+                style={{
+                    padding: "10px",
+
+                    borderTop:
+                        darkMode
+                            ? "1px solid #1f2937"
+                            : "1px solid #e5e7eb",
+
+                    flexShrink: 0
                 }}
             >
 

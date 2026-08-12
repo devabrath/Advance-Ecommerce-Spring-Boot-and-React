@@ -29,6 +29,9 @@ import AdminAddProduct from "./pages/AdminAddProduct";
 import AdminVendors from "./pages/AdminVendors";
 import AdminCustomers from "./pages/AdminCustomers";
 import AdminCategories from "./pages/AdminCategories";
+import AdminProfile from "./pages/AdminProfile";
+import AdminOrders from "./pages/AdminOrders";
+import AdminRevenue from "./pages/AdminRevenue";
 
 import {
     BrowserRouter,
@@ -272,6 +275,22 @@ function App() {
                                         path="/admin/dashboard"
                                         element={<AdminDashboard />}
                                     />
+                                    <Route
+                                            path="/admin/orders"
+                                            element={
+                                                <AdminOrders />
+                                            }
+                                        />
+                                        <Route
+                                            path="/admin/profile"
+                                            element={
+                                                <AdminProfile />
+                                            }
+                                        />
+                                        <Route
+                                            path="/admin/revenue"
+                                            element={<AdminRevenue />}
+                                        />
 
                                     <Route
                                         path="/admin/products"

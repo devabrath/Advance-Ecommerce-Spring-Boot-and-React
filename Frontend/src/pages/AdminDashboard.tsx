@@ -1,76 +1,97 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import API from "../axios";
 
-interface DashboardData {
-    totalProducts: number;
-    totalOrders: number;
-    totalCustomers: number;
-    totalVendors: number;
-    totalSales: number;
-    pendingOrders: number;
+type Period =
+    | "week"
+    | "month"
+    | "year";
+
+
+interface RevenuePoint {
+    label: string;
+    revenue: number;
+    orders: number;
 }
 
+
+interface DashboardData {
+    totalRevenue: number;
+    totalOrders: number;
+    totalProducts: number;
+    totalUsers: number;
+    totalVendors: number;
+    pendingOrders: number;
+    revenueData: RevenuePoint[];
+}
+
+
 const AdminDashboard = () => {
+
+    const [period, setPeriod] =
+        useState<Period>("month");
+
 
     const [data, setData] =
         useState<DashboardData | null>(null);
 
+
     const [loading, setLoading] =
         useState(true);
+
 
     const [error, setError] =
         useState("");
 
 
+    const fetchDashboard = async (
+        selectedPeriod: Period
+    ) => {
+
+        try {
+
+            setLoading(true);
+
+            const response =
+                await API.get<DashboardData>(
+                    `/admin/dashboard?period=${selectedPeriod}`
+                );
+
+            setData(response.data);
+
+            setError("");
+
+        } catch (err: any) {
+
+            console.error(
+                "Dashboard error:",
+                err
+            );
+
+            setError(
+                err?.response?.data ||
+                "Unable to load dashboard."
+            );
+
+        } finally {
+
+            setLoading(false);
+        }
+    };
+
+
     useEffect(() => {
 
-        const fetchDashboard = async () => {
+        fetchDashboard(period);
 
-            try {
-
-                setLoading(true);
-
-                const response =
-                    await API.get<DashboardData>(
-                        "/admin/dashboard"
-                    );
-
-                setData(response.data);
-
-                setError("");
-
-            } catch (err: any) {
-
-                console.error(
-                    "Admin dashboard error:",
-                    err
-                );
-
-                setError(
-                    err?.response?.data ||
-                    "Unable to load dashboard."
-                );
-
-            } finally {
-
-                setLoading(false);
-            }
-        };
-
-        fetchDashboard();
-
-    }, []);
+    }, [period]);
 
 
     if (loading) {
 
         return (
-            <div className="admin-page">
+            <div className="admin-dashboard-loading">
 
-                <h1>
-                    Admin Dashboard
-                </h1>
+                <div className="loading-spinner"></div>
 
                 <p>
                     Loading dashboard...
@@ -84,13 +105,9 @@ const AdminDashboard = () => {
     if (error) {
 
         return (
-            <div className="admin-page">
+            <div className="admin-dashboard">
 
-                <h1>
-                    Admin Dashboard
-                </h1>
-
-                <div className="alert alert-danger">
+                <div className="dashboard-error">
                     {error}
                 </div>
 
@@ -104,187 +121,391 @@ const AdminDashboard = () => {
     }
 
 
+    const maxRevenue =
+        Math.max(
+            ...data.revenueData.map(
+                item =>
+                    Number(item.revenue)
+            ),
+            1
+        );
+
+
     return (
 
-        <div className="admin-page">
+        <div className="admin-dashboard">
 
-            <div className="admin-page-header">
+            {/* HEADER */}
+
+            <div className="dashboard-header">
 
                 <div>
 
-                    <h1>
-                        Admin Dashboard
-                    </h1>
+                    {/* <h3>
+                        Dashboard
+                    </h3> */}
 
-                    <p>
-                        Welcome to Dunique
-                        Shopping App administration.
-                    </p>
+                </div>
+
+                <div className="dashboard-date">
+
+                    {new Date().toLocaleDateString(
+                        "en-IN",
+                        {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric"
+                        }
+                    )}
 
                 </div>
 
             </div>
 
 
-            {/* STATISTICS */}
+            {/* STAT CARDS */}
 
-            <div className="admin-stats">
+            <div className="dashboard-stats">
 
+                <div className="dashboard-card">
 
-                <div className="admin-stat-card">
+                    <div className="stat-top">
 
-                    <span>
-                        Total Products
-                    </span>
+                        <div className="stat-icon revenue-icon">
+                            ₹
+                        </div>
 
-                    <strong>
-                        {data.totalProducts}
-                    </strong>
+                        <span className="stat-label">
+                            Total Revenue
+                        </span>
 
-                    <Link
-                        to="/admin/products"
-                    >
-                        View Products →
-                    </Link>
+                    </div>
 
-                </div>
-
-
-                <div className="admin-stat-card">
-
-                    <span>
-                        Total Orders
-                    </span>
-
-                    <strong>
-                        {data.totalOrders}
-                    </strong>
-
-                    <Link
-                        to="/admin/orders"
-                    >
-                        View Orders →
-                    </Link>
-
-                </div>
-
-
-                <div className="admin-stat-card">
-
-                    <span>
-                        Customers
-                    </span>
-
-                    <strong>
-                        {data.totalCustomers}
-                    </strong>
-
-                    <Link
-                        to="/admin/customers"
-                    >
-                        View Customers →
-                    </Link>
-
-                </div>
-
-
-                <div className="admin-stat-card">
-
-                    <span>
-                        Vendors
-                    </span>
-
-                    <strong>
-                        {data.totalVendors}
-                    </strong>
-
-                    <Link
-                        to="/admin/vendors"
-                    >
-                        View Vendors →
-                    </Link>
-
-                </div>
-
-
-                <div className="admin-stat-card">
-
-                    <span>
-                        Total Sales
-                    </span>
-
-                    <strong>
+                    <h2>
                         ₹
                         {Number(
-                            data.totalSales
-                        ).toLocaleString("en-IN")}
-                    </strong>
+                            data.totalRevenue
+                        ).toLocaleString(
+                            "en-IN"
+                        )}
+                    </h2>
+
+                    <span className="stat-description">
+                        Excluding cancelled orders
+                    </span>
 
                 </div>
 
 
-                <div className="admin-stat-card">
+                <div className="dashboard-card">
 
-                    <span>
-                        Pending Orders
+                    <div className="stat-top">
+
+                        <div className="stat-icon orders-icon">
+                            🛒
+                        </div>
+
+                        <span className="stat-label">
+                            Total Orders
+                        </span>
+
+                    </div>
+
+                    <h2>
+                        {data.totalOrders}
+                    </h2>
+
+                    <span className="stat-description">
+                        All customer orders
                     </span>
 
-                    <strong>
-                        {data.pendingOrders}
-                    </strong>
+                </div>
 
-                    <Link
-                        to="/admin/orders"
-                    >
-                        Manage Orders →
-                    </Link>
+
+                <div className="dashboard-card">
+
+                    <div className="stat-top">
+
+                        <div className="stat-icon products-icon">
+                            📦
+                        </div>
+
+                        <span className="stat-label">
+                            Total Products
+                        </span>
+
+                    </div>
+
+                    <h2>
+                        {data.totalProducts}
+                    </h2>
+
+                    <span className="stat-description">
+                        Products in store
+                    </span>
+
+                </div>
+
+
+                <div className="dashboard-card">
+
+                    <div className="stat-top">
+
+                        <div className="stat-icon customers-icon">
+                            👥
+                        </div>
+
+                        <span className="stat-label">
+                            Total Users
+                        </span>
+
+                    </div>
+
+                    <h2>
+                        {data.totalUsers}
+                    </h2>
+
+                    <span className="stat-description">
+                        Registered customers
+                    </span>
+
+                </div>
+
+
+                <div className="dashboard-card">
+
+                    <div className="stat-top">
+
+                        <div className="stat-icon vendors-icon">
+                            🏪
+                        </div>
+
+                        <span className="stat-label">
+                            Vendors
+                        </span>
+
+                    </div>
+
+                    <h2>
+                        {data.totalVendors}
+                    </h2>
+
+                    <span className="stat-description">
+                        Active vendor accounts
+                    </span>
+
+                </div>
+
+
+                <div className="dashboard-card">
+
+                    <div className="stat-top">
+
+                        <div className="stat-icon pending-icon">
+                            ⏳
+                        </div>
+
+                        <span className="stat-label">
+                            Pending Orders
+                        </span>
+
+                    </div>
+
+                    <h2>
+                        {data.pendingOrders}
+                    </h2>
+
+                    <span className="stat-description">
+                        Placed + confirmed
+                    </span>
 
                 </div>
 
             </div>
 
 
-            {/* QUICK ACTIONS */}
+            {/* REVENUE PANEL */}
 
-            <div className="admin-section">
+            <div className="dashboard-panel">
 
-                <h2>
-                    Quick Actions
-                </h2>
+                <div className="panel-header">
 
+                    <div>
 
-                <div className="admin-actions">
+                        <h3>
+                            Revenue Overview
+                        </h3>
 
-                    <Link
-                        to="/admin/products"
-                        className="btn btn-primary"
-                    >
-                        Manage Products
-                    </Link>
+                        <p>
+                            Revenue and order performance
+                        </p>
 
-
-                    <Link
-                        to="/admin/orders"
-                        className="btn btn-primary"
-                    >
-                        Manage Orders
-                    </Link>
+                    </div>
 
 
-                    <Link
-                        to="/admin/vendors"
-                        className="btn btn-primary"
-                    >
-                        Manage Vendors
-                    </Link>
+                    <div className="period-selector">
+
+                        <button
+                            className={
+                                period === "week"
+                                    ? "active"
+                                    : ""
+                            }
+                            onClick={() =>
+                                setPeriod("week")
+                            }
+                        >
+                            Week
+                        </button>
+
+                        <button
+                            className={
+                                period === "month"
+                                    ? "active"
+                                    : ""
+                            }
+                            onClick={() =>
+                                setPeriod("month")
+                            }
+                        >
+                            Month
+                        </button>
+
+                        <button
+                            className={
+                                period === "year"
+                                    ? "active"
+                                    : ""
+                            }
+                            onClick={() =>
+                                setPeriod("year")
+                            }
+                        >
+                            Year
+                        </button>
+
+                    </div>
+
+                </div>
 
 
-                    <Link
-                        to="/admin/customers"
-                        className="btn btn-primary"
-                    >
-                        Manage Customers
-                    </Link>
+                {/* CHART */}
+
+                <div className="revenue-chart">
+
+                    <div className="chart-y-axis">
+
+                        <span>
+                            ₹
+                            {Math.round(
+                                maxRevenue
+                            ).toLocaleString(
+                                "en-IN"
+                            )}
+                        </span>
+
+                        <span>
+                            ₹
+                            {Math.round(
+                                maxRevenue / 2
+                            ).toLocaleString(
+                                "en-IN"
+                            )}
+                        </span>
+
+                        <span>
+                            ₹0
+                        </span>
+
+                    </div>
+
+
+                    <div className="chart-area">
+
+                        <div className="chart-horizontal-line"></div>
+                        <div className="chart-horizontal-line"></div>
+                        <div className="chart-horizontal-line"></div>
+
+
+                        <div className="chart-bars">
+
+                            {data.revenueData.map(
+                                (item) => {
+
+                                    const revenue =
+                                        Number(
+                                            item.revenue
+                                        );
+
+
+                                    const height =
+                                        Math.max(
+                                            (revenue /
+                                                maxRevenue) *
+                                                100,
+                                            revenue > 0
+                                                ? 5
+                                                : 2
+                                        );
+
+
+                                    return (
+
+                                        <div
+                                            className="chart-column"
+                                            key={
+                                                item.label
+                                            }
+                                        >
+
+                                            <div
+                                                className="chart-value"
+                                            >
+                                                {revenue > 0
+                                                    ? `₹${revenue.toLocaleString(
+                                                        "en-IN"
+                                                    )}`
+                                                    : "₹0"
+                                                }
+                                            </div>
+
+
+                                            <div
+                                                className="chart-bar"
+                                                style={{
+                                                    height:
+                                                        `${height}%`
+                                                }}
+                                                title={
+                                                    `Revenue: ₹${revenue.toLocaleString(
+                                                        "en-IN"
+                                                    )} | Orders: ${item.orders}`
+                                                }
+                                            />
+
+
+                                            <span className="chart-label">
+                                                {
+                                                    item.label
+                                                }
+                                            </span>
+
+
+                                            <small className="chart-orders">
+                                                {item.orders}
+                                                {" "}
+                                                orders
+                                            </small>
+
+                                        </div>
+                                    );
+                                }
+                            )}
+
+                        </div>
+
+                    </div>
 
                 </div>
 
@@ -293,5 +514,6 @@ const AdminDashboard = () => {
         </div>
     );
 };
+
 
 export default AdminDashboard;

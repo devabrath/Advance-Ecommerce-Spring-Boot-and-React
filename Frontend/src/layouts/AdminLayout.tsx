@@ -1,20 +1,62 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 
 import AdminSidebar from "../components/AdminSidebar";
 
 const AdminLayout = () => {
 
+    const [darkMode, setDarkMode] =
+        useState<boolean>(() => {
+
+            return (
+                localStorage.getItem(
+                    "adminDarkMode"
+                ) === "true"
+            );
+        });
+
+
+    useEffect(() => {
+
+        localStorage.setItem(
+            "adminDarkMode",
+            String(darkMode)
+        );
+
+    }, [darkMode]);
+
+
     return (
 
         <div
+            className={
+                darkMode
+                    ? "admin-theme-dark"
+                    : "admin-theme-light"
+            }
             style={{
                 minHeight: "100vh",
-                backgroundColor: "#f8fafc"
+
+                backgroundColor:
+                    darkMode
+                        ? "#0f172a"
+                        : "#f8fafc",
+
+                color:
+                    darkMode
+                        ? "#f9fafb"
+                        : "#111827",
+
+                transition:
+                    "background-color 0.2s ease"
             }}
         >
 
-            <AdminSidebar />
+            <AdminSidebar
+                darkMode={darkMode}
+                setDarkMode={setDarkMode}
+            />
+
 
             <main
                 style={{
