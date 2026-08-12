@@ -12,14 +12,21 @@ import AddProduct from "./components/AddProduct";
 import Product from "./components/Product";
 import UpdateProduct from "./components/UpdateProduct";
 import ProtectedRoute from "./components/ProtectedRoute";
+import VendorOrders from "./components/VendorOrders";
+
 import MyOrders from "./pages/MyOrders";
 import OrderDetails from "./pages/OrderDetails";
 import Profile from "./pages/Profile";
+import VendorProfile from "./pages/VendorProfile";
+import VendorDashboard from "./pages/VendorDashboard";
+import VendorProducts from "./components/VendorProducts";
+import VendorLayout from "./layouts/VendorLayout";
 
 import {
     BrowserRouter,
     Routes,
-    Route
+    Route,
+    useLocation
 } from "react-router-dom";
 
 import { AppProvider } from "./Context/Context";
@@ -29,10 +36,51 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 
+interface CustomerNavbarProps {
+    onSelectCategory: (category: string) => void;
+}
+
+
+const CustomerNavbar = ({
+    onSelectCategory
+}: CustomerNavbarProps) => {
+
+    const location = useLocation();
+
+    /*
+     * Customer Navbar must NOT appear
+     * on Vendor or Admin pages.
+     */
+
+    const isVendorRoute =
+        location.pathname.startsWith("/vendor");
+
+    const isAdminRoute =
+        location.pathname.startsWith("/admin");
+
+    if (
+        isVendorRoute ||
+        isAdminRoute
+    ) {
+        return null;
+    }
+
+    return (
+        <Navbar
+            onSelectCategory={
+                onSelectCategory
+            }
+        />
+    );
+};
+
+
 function App() {
 
-    const [selectedCategory, setSelectedCategory] =
-        useState<string>("");
+    const [
+        selectedCategory,
+        setSelectedCategory
+    ] = useState<string>("");
 
 
     const handleCategorySelect = (
@@ -56,17 +104,23 @@ function App() {
 
                 <BrowserRouter>
 
-                    <Navbar
+                    {/* ================================= */}
+                    {/* CUSTOMER NAVBAR ONLY */}
+                    {/* ================================= */}
+
+                    <CustomerNavbar
                         onSelectCategory={
                             handleCategorySelect
                         }
                     />
 
+
                     <Routes>
 
-                        {/* ========================= */}
-                        {/* PUBLIC PAGES */}
-                        {/* ========================= */}
+
+                        {/* ================================= */}
+                        {/* CUSTOMER PUBLIC PAGES */}
+                        {/* ================================= */}
 
                         <Route
                             path="/"
@@ -79,78 +133,213 @@ function App() {
                             }
                         />
 
+
                         <Route
                             path="/login"
-                            element={<Login />}
+                            element={
+                                <Login />
+                            }
                         />
+
 
                         <Route
                             path="/register"
-                            element={<Register />}
+                            element={
+                                <Register />
+                            }
                         />
+
 
                         <Route
                             path="/product/:id"
-                            element={<Product />}
+                            element={
+                                <Product />
+                            }
                         />
 
 
-                        {/* ========================= */}
-                        {/* TEMPORARILY PUBLIC */}
-                        {/* ========================= */}
+                        {/* ================================= */}
+                        {/* CUSTOMER PROTECTED PAGES */}
+                        {/* ================================= */}
 
                         <Route
                             path="/cart"
                             element={
                                 <ProtectedRoute
-                                    allowedRoles={["CUSTOMER"]}
+                                    allowedRoles={[
+                                        "CUSTOMER"
+                                    ]}
                                 >
                                     <Cart />
                                 </ProtectedRoute>
                             }
                         />
 
-                        <Route
-                            path="/add_product"
-                            element={<AddProduct />}
-                        />
 
-                        <Route
-                            path="/product/update/:id"
-                            element={
-                                <UpdateProduct />
-                            }
-                        />
                         <Route
                             path="/orders"
                             element={
                                 <ProtectedRoute
-                                    allowedRoles={["CUSTOMER"]}
+                                    allowedRoles={[
+                                        "CUSTOMER"
+                                    ]}
                                 >
                                     <MyOrders />
                                 </ProtectedRoute>
                             }
                         />
+
+
                         <Route
-                                path="/orders/:id"
+                            path="/orders/:id"
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={[
+                                        "CUSTOMER"
+                                    ]}
+                                >
+                                    <OrderDetails />
+                                </ProtectedRoute>
+                            }
+                        />
+
+
+                        <Route
+                            path="/profile"
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={[
+                                        "CUSTOMER"
+                                    ]}
+                                >
+                                    <Profile />
+                                </ProtectedRoute>
+                            }
+                        />
+
+
+                        {/* ================================= */}
+                        {/* OLD CUSTOMER/ADMIN PRODUCT ROUTES */}
+                        {/* ================================= */}
+
+                        <Route
+                            path="/add_product"
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={[
+                                        "ADMIN"
+                                    ]}
+                                >
+                                    <AddProduct />
+                                </ProtectedRoute>
+                            }
+                        />
+
+
+                        <Route
+                            path="/product/update/:id"
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={[
+                                        "ADMIN"
+                                    ]}
+                                >
+                                    <UpdateProduct />
+                                </ProtectedRoute>
+                            }
+                        />
+
+
+                        {/* ================================= */}
+                        {/* VENDOR APPLICATION */}
+                        {/* ================================= */}
+
+                        <Route
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={[
+                                        "VENDOR"
+                                    ]}
+                                >
+                                    <VendorLayout />
+                                </ProtectedRoute>
+                            }
+                        >
+
+                            <Route
+                                path="/vendor/dashboard"
                                 element={
-                                    <ProtectedRoute
-                                        allowedRoles={["CUSTOMER"]}
-                                    >
-                                        <OrderDetails />
-                                    </ProtectedRoute>
+                                    <VendorDashboard />
                                 }
                             />
                             <Route
-                                path="/profile"
+                                path="/vendor/orders"
                                 element={
-                                    <ProtectedRoute
-                                        allowedRoles={["CUSTOMER"]}
-                                    >
-                                        <Profile />
-                                    </ProtectedRoute>
+                                    <VendorOrders />
                                 }
                             />
+                            <Route
+                                path="/vendor/profile"
+                                element={
+                                    <VendorProfile />
+                                }
+                            />
+
+                            <Route
+                                path="/vendor/products"
+                                element={
+                                    <VendorProducts />
+                                }
+                            />
+
+
+                            <Route
+                                path="/vendor/products/add"
+                                element={
+                                    <AddProduct />
+                                }
+                            />
+
+
+                            <Route
+                                path="/vendor/products/edit/:id"
+                                element={
+                                    <UpdateProduct />
+                                }
+                            />
+
+                        </Route>
+
+
+                        {/* ================================= */}
+                        {/* ADMIN WILL COME HERE */}
+                        {/* ================================= */}
+
+                        {/*
+
+                        <Route
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={[
+                                        "ADMIN"
+                                    ]}
+                                >
+                                    <AdminLayout />
+                                </ProtectedRoute>
+                            }
+                        >
+
+                            <Route
+                                path="/admin/dashboard"
+                                element={
+                                    <AdminDashboard />
+                                }
+                            />
+
+                        </Route>
+
+                        */}
+
 
                     </Routes>
 
@@ -159,8 +348,8 @@ function App() {
             </AppProvider>
 
         </AuthProvider>
-
     );
 }
+
 
 export default App;

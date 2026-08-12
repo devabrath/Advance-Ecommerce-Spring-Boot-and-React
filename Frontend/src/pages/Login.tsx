@@ -88,13 +88,13 @@ const Login = () => {
 
                                 if (authData.role === "ADMIN") {
 
-                                    navigate("/admin");
+                                    navigate("/admin/dashboard");
 
                                 } else if (
                                     authData.role === "VENDOR"
                                 ) {
 
-                                    navigate("/vendor");
+                                    navigate("/vendor/dashboard");
 
                                 } else {
 

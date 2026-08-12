@@ -3,74 +3,50 @@ import {
     Link,
     useNavigate
 } from "react-router-dom";
-import { useAppContext } from "../Context/Context";
-import axios from "axios";
 
+import { useAppContext } from "../Context/Context";
 import { useAuth } from "../Context/AuthContext";
+import API from "../axios";
+
+import "bootstrap/dist/js/bootstrap.bundle.min.js";
 
 interface NavbarProps {
     onSelectCategory: (category: string) => void;
+}
+
+interface Address {
+    id: number;
+    fullName: string;
+    phone: string;
+    addressLine: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    landmark?: string;
+    addressType: string;
+    defaultAddress: boolean;
 }
 
 const Navbar = ({
     onSelectCategory
 }: NavbarProps) => {
 
-    // =========================
-    // AUTH
-    // =========================
-
     const navigate = useNavigate();
 
     const {
-    user,
-    isAuthenticated,
-    logout
-} = useAuth();
+        user,
+        isAuthenticated,
+        logout
+    } = useAuth();
 
-const { clearCart } = useAppContext();
-
-
-    // =========================
-    // THEME
-    // =========================
-
-    const getInitialTheme = () => {
-
-        const storedTheme =
-            localStorage.getItem("theme");
-
-        return storedTheme
-            ? storedTheme
-            : "light-theme";
-    };
-
-    const [theme, setTheme] =
-        useState<string>(
-            getInitialTheme()
-        );
+    const {
+        clearCart
+    } = useAppContext();
 
 
-    // =========================
-    // SEARCH
-    // =========================
-
-    const [input, setInput] =
-        useState<string>("");
-
-    const [searchResults, setSearchResults] =
-        useState<any[]>([]);
-
-    const [noResults, setNoResults] =
-        useState<boolean>(false);
-
-    const [showSearchResults, setShowSearchResults] =
-        useState<boolean>(false);
-
-
-    // =========================
-    // CATEGORIES
-    // =========================
+    /* =========================
+       CATEGORIES
+    ========================= */
 
     const categories = [
         "Laptop",
@@ -82,484 +58,1057 @@ const { clearCart } = useAppContext();
     ];
 
 
-    // =========================
-    // LOAD PRODUCTS
-    // =========================
+    /* =========================
+       SEARCH
+    ========================= */
+
+    const [input, setInput] =
+        useState("");
+
+    const [searchResults, setSearchResults] =
+        useState<any[]>([]);
+
+    const [noResults, setNoResults] =
+        useState(false);
+
+    const [showSearchResults, setShowSearchResults] =
+        useState(false);
+
+
+    /* =========================
+       DELIVERY ADDRESS
+    ========================= */
+
+    const [defaultAddress, setDefaultAddress] =
+        useState<Address | null>(null);
+
+
+    /* =========================
+       FETCH DEFAULT ADDRESS
+    ========================= */
 
     useEffect(() => {
 
-        fetchData();
+        const fetchDefaultAddress =
+            async () => {
 
-    }, []);
+                if (
+                    !isAuthenticated ||
+                    user?.role !== "CUSTOMER"
+                ) {
+
+                    setDefaultAddress(null);
+
+                    return;
+                }
+
+                try {
+
+                    const response =
+                        await API.get<Address[]>(
+                            "/customer/addresses"
+                        );
+
+                    const addresses =
+                        response.data;
+
+                    const address =
+                        addresses.find(
+                            item =>
+                                item.defaultAddress
+                        );
+
+                    setDefaultAddress(
+                        address ||
+                        addresses[0] ||
+                        null
+                    );
+
+                } catch (error) {
+
+                    console.error(
+                        "Unable to load delivery address:",
+                        error
+                    );
+
+                    setDefaultAddress(null);
+                }
+            };
+
+        fetchDefaultAddress();
+
+    }, [
+        isAuthenticated,
+        user?.userId
+    ]);
 
 
-    const fetchData = async () => {
+    /* =========================
+       SEARCH
+    ========================= */
+
+    const handleSearch = async (
+        value: string
+    ) => {
+
+        setInput(value);
+
+        if (value.trim().length === 0) {
+
+            setShowSearchResults(false);
+            setSearchResults([]);
+            setNoResults(false);
+
+            return;
+        }
+
+        setShowSearchResults(true);
 
         try {
 
             const response =
-                await axios.get(
-                    "http://localhost:8080/api/products"
+                await API.get(
+                    `/products/search?keyword=${encodeURIComponent(
+                        value.trim()
+                    )}`
                 );
 
             setSearchResults(
                 response.data
             );
 
+            setNoResults(
+                response.data.length === 0
+            );
+
         } catch (error) {
 
             console.error(
-                "Error fetching products:",
+                "Search error:",
                 error
             );
 
-        }
-    };
-
-
-    // =========================
-    // SEARCH
-    // =========================
-
-    const handleChange = async (
-        value: string
-    ) => {
-
-        setInput(value);
-
-        if (value.length >= 1) {
-
-            setShowSearchResults(true);
-
-            try {
-
-                const response =
-                    await axios.get(
-                        `http://localhost:8080/api/products/search?keyword=${encodeURIComponent(value)}`
-                    );
-
-                setSearchResults(
-                    response.data
-                );
-
-                setNoResults(
-                    response.data.length === 0
-                );
-
-            } catch (error) {
-
-                console.error(
-                    "Error searching:",
-                    error
-                );
-
-                setSearchResults([]);
-
-                setNoResults(true);
-            }
-
-        } else {
-
-            setShowSearchResults(false);
-
             setSearchResults([]);
 
-            setNoResults(false);
+            setNoResults(true);
         }
     };
 
 
-    // =========================
-    // CATEGORY
-    // =========================
+    /* =========================
+       SEARCH SUBMIT
+    ========================= */
+
+    const handleSearchSubmit = (
+        e: React.FormEvent
+    ) => {
+
+        e.preventDefault();
+
+        if (!input.trim()) {
+            return;
+        }
+
+        setShowSearchResults(false);
+
+        navigate(
+            `/?search=${encodeURIComponent(
+                input.trim()
+            )}`
+        );
+    };
+
+
+    /* =========================
+       CATEGORY
+    ========================= */
 
     const handleCategorySelect = (
         category: string
     ) => {
 
         onSelectCategory(category);
+
+        navigate("/");
     };
 
 
-    // =========================
-    // THEME
-    // =========================
-
-    const toggleTheme = () => {
-
-        const newTheme =
-            theme === "dark-theme"
-                ? "light-theme"
-                : "dark-theme";
-
-        setTheme(newTheme);
-
-        localStorage.setItem(
-            "theme",
-            newTheme
-        );
-    };
-
-
-    useEffect(() => {
-
-        document.body.className =
-            theme;
-
-    }, [theme]);
-
-
-    // =========================
-    // LOGOUT
-    // =========================
+    /* =========================
+       LOGOUT
+    ========================= */
 
     const handleLogout = () => {
 
-    clearCart();
+        clearCart();
 
-    localStorage.removeItem("cart");
+        localStorage.removeItem("cart");
 
-    logout();
+        logout();
 
-    navigate("/login");
-};
+        setDefaultAddress(null);
 
+        navigate("/login");
+    };
 
-    // =========================
-    // UI
-    // =========================
 
     return (
 
-        <header>
+        <>
 
-            <nav className="navbar navbar-expand-lg fixed-top">
+            <header>
 
-                <div className="container-fluid">
-
-
-                    {/* BRAND */}
-
-                    <Link
-                        className="navbar-brand"
-                        to="/"
-                    >
-                        Dunique Shopping 🛒
-                    </Link>
-
-
-                    {/* MOBILE MENU BUTTON */}
-
-                    <button
-                        className="navbar-toggler"
-                        type="button"
-                        data-bs-toggle="collapse"
-                        data-bs-target="#navbarSupportedContent"
-                        aria-controls="navbarSupportedContent"
-                        aria-expanded="false"
-                        aria-label="Toggle navigation"
-                    >
-
-                        <span className="navbar-toggler-icon"></span>
-
-                    </button>
-
+                <nav
+                    className="navbar navbar-expand-xl fixed-top"
+                    style={{
+                        backgroundColor: "#ffffff",
+                        borderBottom:
+                            "1px solid #e5e7eb",
+                        boxShadow:
+                            "0 2px 8px rgba(0,0,0,0.08)",
+                        minHeight: "72px",
+                        zIndex: 1050
+                    }}
+                >
 
                     <div
-                        className="collapse navbar-collapse"
-                        id="navbarSupportedContent"
+                        className="container-fluid px-3"
                     >
 
 
-                        {/* ========================= */}
-                        {/* LEFT MENU */}
-                        {/* ========================= */}
+                        {/* =========================
+                            LOGO + HOME
+                        ========================= */}
 
-                        <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-
-
-                            {/* HOME */}
-
-                            <li className="nav-item">
-
-                                <Link
-                                    className="nav-link active"
-                                    to="/"
-                                >
-                                    Home
-                                </Link>
-
-                            </li>
-
-
-                            {/* CATEGORIES */}
-
-                            <li className="nav-item dropdown">
-
-                                <button
-                                    className="nav-link dropdown-toggle btn btn-link"
-                                    type="button"
-                                    data-bs-toggle="dropdown"
-                                    aria-expanded="false"
-                                >
-                                    Categories
-                                </button>
-
-
-                                <ul className="dropdown-menu">
-
-                                    {categories.map(
-                                        (category) => (
-
-                                            <li
-                                                key={category}
-                                            >
-
-                                                <button
-                                                    className="dropdown-item"
-                                                    onClick={() =>
-                                                        handleCategorySelect(
-                                                            category
-                                                        )
-                                                    }
-                                                >
-                                                    {category}
-                                                </button>
-
-                                            </li>
-
-                                        )
-                                    )}
-
-                                </ul>
-
-                            </li>
-
-                        </ul>
-
-
-                        {/* ========================= */}
-                        {/* RIGHT SIDE */}
-                        {/* ========================= */}
-
-                        <div className="d-flex align-items-center gap-2">
-
-
-                            {/* THEME */}
-
-                            <button
-                                className="theme-btn"
-                                type="button"
-                                onClick={
-                                    toggleTheme
-                                }
-                            >
-
-                                {theme ===
-                                "dark-theme" ? (
-
-                                    <i className="bi bi-moon-fill"></i>
-
-                                ) : (
-
-                                    <i className="bi bi-sun-fill"></i>
-
-                                )}
-
-                            </button>
-
-
-                            {/* CART */}
+                        <div
+                            className="d-flex align-items-center"
+                            style={{
+                                whiteSpace:
+                                    "nowrap"
+                            }}
+                        >
 
                             <Link
-                                to="/cart"
-                                className="nav-link"
+                                to="/"
+                                className="text-decoration-none fw-bold"
+                                style={{
+                                    color: "#1769aa",
+                                    fontSize: "21px",
+                                    marginRight: "18px"
+                                }}
+                            >
+                                Dunique
+                            </Link>
+
+
+                            <Link
+                                to="/"
+                                className="text-decoration-none"
+                                style={{
+                                    color: "#172b4d",
+                                    fontSize: "15px",
+                                    fontWeight: 600
+                                }}
+                            >
+                                Home
+                            </Link>
+
+                        </div>
+
+
+                        {/* =========================
+                            MOBILE TOGGLE
+                        ========================= */}
+
+                        <button
+                            className="navbar-toggler"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#mainNavbar"
+                            aria-controls="mainNavbar"
+                            aria-expanded="false"
+                            aria-label="Toggle navigation"
+                        >
+
+                            <span
+                                className="navbar-toggler-icon"
+                            />
+
+                        </button>
+
+
+                        {/* =========================
+                            NAVBAR CONTENT
+                        ========================= */}
+
+                        <div
+                            className="collapse navbar-collapse"
+                            id="mainNavbar"
+                        >
+
+                            <div
+                                className="w-100 d-flex align-items-center gap-2"
                             >
 
-                                <i className="bi bi-cart me-2">
-                                    Cart
-                                </i>
 
-                            </Link>
-                            {isAuthenticated &&
-                                user?.role === "CUSTOMER" && (
+                                {/* =========================
+                                    DELIVERY
+                                ========================= */}
 
                                 <Link
-                                    className="nav-link"
-                                    to="/orders"
+                                    to={
+                                        isAuthenticated
+                                            ? "/profile"
+                                            : "/login"
+                                    }
+                                    className="text-decoration-none"
+                                    style={{
+                                        minWidth:
+                                            "175px",
+                                        padding:
+                                            "5px 8px",
+                                        color:
+                                            "#172b4d"
+                                    }}
                                 >
-                                    My Orders
+
+                                    <div
+                                        style={{
+                                            display:
+                                                "flex",
+                                            alignItems:
+                                                "center"
+                                        }}
+                                    >
+
+                                        <span
+                                            style={{
+                                                fontSize:
+                                                    "22px",
+                                                marginRight:
+                                                    "7px"
+                                            }}
+                                        >
+                                            🚚
+                                        </span>
+
+
+                                        <div>
+
+                                            <div
+                                                style={{
+                                                    fontSize:
+                                                        "11px",
+                                                    color:
+                                                        "#6b7280"
+                                                }}
+                                            >
+                                                Deliver to
+                                            </div>
+
+
+                                            <div
+                                                style={{
+                                                    fontSize:
+                                                        "14px",
+                                                    fontWeight:
+                                                        600
+                                                }}
+                                            >
+
+                                                {isAuthenticated
+                                                    ? user?.firstName
+                                                    : "Sign in"}
+
+                                            </div>
+
+
+                                            {defaultAddress && (
+
+                                                <div
+                                                    style={{
+                                                        fontSize:
+                                                            "11px",
+                                                        color:
+                                                            "#6b7280"
+                                                    }}
+                                                >
+
+                                                    {
+                                                        defaultAddress.city
+                                                    }{" "}
+                                                    -{" "}
+                                                    {
+                                                        defaultAddress.postalCode
+                                                    }
+
+                                                </div>
+
+                                            )}
+
+                                        </div>
+
+                                    </div>
+
                                 </Link>
 
-                            )}
-                            {isAuthenticated &&
-    user?.role === "CUSTOMER" && (
-        <Link
-            className="nav-link"
-            to="/profile"
-        >
-            Profile
-        </Link>
-)}
 
+                                {/* =========================
+                                    CATEGORIES
+                                ========================= */}
 
-                            {/* ========================= */}
-                            {/* AUTH */}
-                            {/* ========================= */}
+                                <div
+                                    className="dropdown"
+                                >
 
-                            {isAuthenticated ? (
-
-                                <>
-
-                                    <span
-                                        className="nav-link"
+                                    <button
+                                        className="btn dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
                                         style={{
+                                            color:
+                                                "#172b4d",
+                                            fontWeight:
+                                                500,
+                                            border:
+                                                "none",
+                                            background:
+                                                "#ffffff"
+                                        }}
+                                    >
+                                        Categories
+                                    </button>
+
+
+                                    <ul
+                                        className="dropdown-menu shadow"
+                                        style={{
+                                            backgroundColor:
+                                                "#ffffff",
+                                            border:
+                                                "1px solid #e5e7eb",
+                                            borderRadius:
+                                                "8px",
+                                            padding:
+                                                "6px",
+                                            minWidth:
+                                                "180px",
+                                            opacity: 1
+                                        }}
+                                    >
+
+                                        {categories.map(
+                                            category => (
+
+                                                <li
+                                                    key={
+                                                        category
+                                                    }
+                                                >
+
+                                                    <button
+                                                        className="dropdown-item"
+                                                        onClick={() =>
+                                                            handleCategorySelect(
+                                                                category
+                                                            )
+                                                        }
+                                                        style={{
+                                                            backgroundColor:
+                                                                "#ffffff",
+                                                            color:
+                                                                "#172b4d",
+                                                            borderRadius:
+                                                                "6px",
+                                                            padding:
+                                                                "9px 12px"
+                                                        }}
+                                                    >
+                                                        {category}
+                                                    </button>
+
+                                                </li>
+
+                                            )
+                                        )}
+
+                                    </ul>
+
+                                </div>
+
+
+                                {/* =========================
+                                    SEARCH
+                                ========================= */}
+
+                                <form
+                                    className="d-flex flex-grow-1"
+                                    onSubmit={
+                                        handleSearchSubmit
+                                    }
+                                    style={{
+                                        position:
+                                            "relative",
+                                        maxWidth:
+                                            "750px"
+                                    }}
+                                >
+
+                                    <input
+                                        type="search"
+                                        className="form-control"
+                                        placeholder="Search products..."
+                                        value={input}
+                                        onChange={
+                                            e =>
+                                                handleSearch(
+                                                    e.target.value
+                                                )
+                                        }
+                                        onFocus={() => {
+
+                                            if (
+                                                input.trim()
+                                                    .length > 0
+                                            ) {
+
+                                                setShowSearchResults(
+                                                    true
+                                                );
+                                            }
+
+                                        }}
+                                        style={{
+                                            height:
+                                                "42px",
+                                            border:
+                                                "1px solid #cbd5e1",
+                                            borderRight:
+                                                "none",
+                                            borderRadius:
+                                                "6px 0 0 6px",
+                                            boxShadow:
+                                                "none"
+                                        }}
+                                    />
+
+
+                                    <button
+                                        type="submit"
+                                        style={{
+                                            width:
+                                                "52px",
+                                            border:
+                                                "1px solid #f59e0b",
+                                            background:
+                                                "#fbbf24",
+                                            borderRadius:
+                                                "0 6px 6px 0",
+                                            fontSize:
+                                                "18px"
+                                        }}
+                                    >
+                                        🔍
+                                    </button>
+
+
+                                    {/* SEARCH RESULTS */}
+
+                                    {showSearchResults && (
+
+                                        <ul
+                                            className="list-group"
+                                            style={{
+                                                position:
+                                                    "absolute",
+                                                top:
+                                                    "46px",
+                                                left: 0,
+                                                right: 0,
+                                                zIndex:
+                                                    2000,
+                                                maxHeight:
+                                                    "350px",
+                                                overflowY:
+                                                    "auto",
+                                                backgroundColor:
+                                                    "#ffffff",
+                                                border:
+                                                    "1px solid #e5e7eb",
+                                                boxShadow:
+                                                    "0 5px 15px rgba(0,0,0,0.15)"
+                                            }}
+                                        >
+
+                                            {searchResults.length >
+                                            0 ? (
+
+                                                searchResults.map(
+                                                    result => (
+
+                                                        <li
+                                                            key={
+                                                                result.id
+                                                            }
+                                                            className="list-group-item"
+                                                            style={{
+                                                                backgroundColor:
+                                                                    "#ffffff"
+                                                            }}
+                                                        >
+
+                                                            <Link
+                                                                to={`/product/${result.id}`}
+                                                                className="text-decoration-none"
+                                                                style={{
+                                                                    color:
+                                                                        "#172b4d"
+                                                                }}
+                                                                onClick={() => {
+
+                                                                    setShowSearchResults(
+                                                                        false
+                                                                    );
+
+                                                                    setInput(
+                                                                        ""
+                                                                    );
+
+                                                                }}
+                                                            >
+
+                                                                <strong>
+                                                                    {
+                                                                        result.name
+                                                                    }
+                                                                </strong>
+
+
+                                                                {result.brand && (
+
+                                                                    <small
+                                                                        className="text-muted ms-2"
+                                                                    >
+                                                                        {
+                                                                            result.brand
+                                                                        }
+                                                                    </small>
+
+                                                                )}
+
+                                                            </Link>
+
+                                                        </li>
+
+                                                    )
+                                                )
+
+                                            ) : (
+
+                                                noResults && (
+
+                                                    <li
+                                                        className="list-group-item"
+                                                        style={{
+                                                            backgroundColor:
+                                                                "#ffffff",
+                                                            color:
+                                                                "#6b7280"
+                                                        }}
+                                                    >
+                                                        No products found
+                                                    </li>
+
+                                                )
+
+                                            )}
+
+                                        </ul>
+
+                                    )}
+
+                                </form>
+
+
+                                {/* =========================
+                                    ACCOUNT
+                                ========================= */}
+
+                                <div
+                                    className="dropdown"
+                                >
+
+                                    <button
+                                        className="btn dropdown-toggle"
+                                        type="button"
+                                        data-bs-toggle="dropdown"
+                                        aria-expanded="false"
+                                        style={{
+                                            color:
+                                                "#172b4d",
+                                            border:
+                                                "none",
+                                            background:
+                                                "#ffffff",
+                                            padding:
+                                                "5px 8px",
                                             whiteSpace:
                                                 "nowrap"
                                         }}
                                     >
-                                        Hi,{" "}
-                                        {user?.firstName}
-                                    </span>
+
+                                        <div
+                                            style={{
+                                                fontSize:
+                                                    "11px",
+                                                color:
+                                                    "#6b7280",
+                                                textAlign:
+                                                    "left"
+                                            }}
+                                        >
+                                            Hello,{" "}
+                                            {isAuthenticated
+                                                ? user?.firstName
+                                                : "Sign in"}
+                                        </div>
 
 
-                                    <button
-                                        type="button"
-                                        className="btn btn-outline-danger"
-                                        onClick={
-                                            handleLogout
-                                        }
-                                    >
-                                        Logout
+                                        <div
+                                            style={{
+                                                fontWeight:
+                                                    700,
+                                                fontSize:
+                                                    "14px"
+                                            }}
+                                        >
+                                            Account
+                                        </div>
+
                                     </button>
 
-                                </>
-
-                            ) : (
-
-                                <>
-
-                                    <Link
-                                        className="btn btn-outline-primary"
-                                        to="/login"
-                                    >
-                                        Login
-                                    </Link>
-
-
-                                    <Link
-                                        className="btn btn-primary"
-                                        to="/register"
-                                    >
-                                        Register
-                                    </Link>
-
-                                </>
-
-                            )}
-
-
-                            {/* ========================= */}
-                            {/* SEARCH */}
-                            {/* ========================= */}
-
-                            <div
-                                style={{
-                                    position:
-                                        "relative"
-                                }}
-                            >
-
-                                <input
-                                    className="form-control"
-                                    type="search"
-                                    placeholder="Search"
-                                    aria-label="Search"
-                                    value={input}
-                                    onChange={(e) =>
-                                        handleChange(
-                                            e.target.value
-                                        )
-                                    }
-                                />
-
-
-                                {showSearchResults && (
 
                                     <ul
-                                        className="list-group"
+                                        className="dropdown-menu dropdown-menu-end shadow"
                                         style={{
-                                            position:
-                                                "absolute",
-
-                                            top:
-                                                "100%",
-
-                                            right: 0,
-
-                                            width:
-                                                "300px",
-
-                                            zIndex:
-                                                1000,
-
-                                            maxHeight:
-                                                "300px",
-
-                                            overflowY:
-                                                "auto"
+                                            backgroundColor:
+                                                "#ffffff",
+                                            border:
+                                                "1px solid #e5e7eb",
+                                            borderRadius:
+                                                "8px",
+                                            padding:
+                                                "6px",
+                                            minWidth:
+                                                "210px",
+                                            opacity: 1
                                         }}
                                     >
 
-                                        {searchResults.length >
-                                        0 ? (
+                                        {isAuthenticated ? (
 
-                                            searchResults.map(
-                                                (result) => (
+                                            <>
 
-                                                    <li
-                                                        key={
-                                                            result.id
-                                                        }
-                                                        className="list-group-item"
-                                                    >
+                                                {/* CUSTOMER */}
+
+                                                {user?.role ===
+                                                    "CUSTOMER" && (
+
+                                                    <>
+
+                                                        <li>
+
+                                                            <Link
+                                                                className="dropdown-item"
+                                                                to="/profile"
+                                                                style={{
+                                                                    backgroundColor:
+                                                                        "#ffffff",
+                                                                    color:
+                                                                        "#172b4d",
+                                                                    borderRadius:
+                                                                        "6px",
+                                                                    padding:
+                                                                        "9px 12px"
+                                                                }}
+                                                            >
+                                                                👤 Your Profile
+                                                            </Link>
+
+                                                        </li>
+
+
+                                                        <li>
+
+                                                            <Link
+                                                                className="dropdown-item"
+                                                                to="/orders"
+                                                                style={{
+                                                                    backgroundColor:
+                                                                        "#ffffff",
+                                                                    color:
+                                                                        "#172b4d",
+                                                                    borderRadius:
+                                                                        "6px",
+                                                                    padding:
+                                                                        "9px 12px"
+                                                                }}
+                                                            >
+                                                                📦 Your Orders
+                                                            </Link>
+
+                                                        </li>
+
+                                                    </>
+
+                                                )}
+
+
+                                                {/* VENDOR */}
+
+                                                {user?.role ===
+                                                    "VENDOR" && (
+
+                                                    <li>
 
                                                         <Link
-                                                            to={`/product/${result.id}`}
-                                                            className="search-result-link"
-                                                            onClick={() =>
-                                                                setShowSearchResults(
-                                                                    false
-                                                                )
-                                                            }
+                                                            className="dropdown-item"
+                                                            to="/vendor/dashboard"
+                                                            style={{
+                                                                backgroundColor:
+                                                                    "#ffffff",
+                                                                color:
+                                                                    "#172b4d",
+                                                                borderRadius:
+                                                                    "6px",
+                                                                padding:
+                                                                    "9px 12px"
+                                                            }}
                                                         >
-                                                            {
-                                                                result.name
-                                                            }
+                                                            📊 Vendor Dashboard
                                                         </Link>
 
                                                     </li>
 
-                                                )
-                                            )
+                                                )}
+
+
+                                                {/* ADMIN */}
+
+                                                {user?.role ===
+                                                    "ADMIN" && (
+
+                                                    <li>
+
+                                                        <Link
+                                                            className="dropdown-item"
+                                                            to="/admin/dashboard"
+                                                            style={{
+                                                                backgroundColor:
+                                                                    "#ffffff",
+                                                                color:
+                                                                    "#172b4d",
+                                                                borderRadius:
+                                                                    "6px",
+                                                                padding:
+                                                                    "9px 12px"
+                                                            }}
+                                                        >
+                                                            📊 Admin Dashboard
+                                                        </Link>
+
+                                                    </li>
+
+                                                )}
+
+
+                                                <li>
+
+                                                    <hr
+                                                        className="dropdown-divider"
+                                                    />
+
+                                                </li>
+
+
+                                                {/* LOGOUT */}
+
+                                                <li>
+
+                                                    <button
+                                                        className="dropdown-item"
+                                                        onClick={
+                                                            handleLogout
+                                                        }
+                                                        style={{
+                                                            backgroundColor:
+                                                                "#ffffff",
+                                                            color:
+                                                                "#dc2626",
+                                                            borderRadius:
+                                                                "6px",
+                                                            padding:
+                                                                "9px 12px"
+                                                        }}
+                                                    >
+                                                        🚪 Logout
+                                                    </button>
+
+                                                </li>
+
+                                            </>
 
                                         ) : (
 
-                                            noResults && (
+                                            <>
 
-                                                <li className="list-group-item">
-                                                    No Product
-                                                    with such
-                                                    Name
+                                                <li>
+
+                                                    <Link
+                                                        className="dropdown-item"
+                                                        to="/login"
+                                                        style={{
+                                                            backgroundColor:
+                                                                "#ffffff",
+                                                            color:
+                                                                "#172b4d",
+                                                            borderRadius:
+                                                                "6px",
+                                                            padding:
+                                                                "9px 12px"
+                                                        }}
+                                                    >
+                                                        🔐 Login
+                                                    </Link>
+
                                                 </li>
 
-                                            )
+
+                                                <li>
+
+                                                    <Link
+                                                        className="dropdown-item"
+                                                        to="/register"
+                                                        style={{
+                                                            backgroundColor:
+                                                                "#ffffff",
+                                                            color:
+                                                                "#172b4d",
+                                                            borderRadius:
+                                                                "6px",
+                                                            padding:
+                                                                "9px 12px"
+                                                        }}
+                                                    >
+                                                        📝 Register
+                                                    </Link>
+
+                                                </li>
+
+                                            </>
 
                                         )}
 
                                     </ul>
 
-                                )}
+                                </div>
+
+
+                                {/* =========================
+                                    RETURNS & ORDERS
+                                ========================= */}
+
+                                <Link
+                                    to={
+                                        isAuthenticated &&
+                                        user?.role ===
+                                            "CUSTOMER"
+                                            ? "/orders"
+                                            : "/login"
+                                    }
+                                    className="text-decoration-none"
+                                    style={{
+                                        color:
+                                            "#172b4d",
+                                        minWidth:
+                                            "105px",
+                                        padding:
+                                            "5px 8px",
+                                        whiteSpace:
+                                            "nowrap"
+                                    }}
+                                >
+
+                                    <div
+                                        style={{
+                                            fontSize:
+                                                "11px",
+                                            color:
+                                                "#6b7280"
+                                        }}
+                                    >
+                                        Returns
+                                    </div>
+
+
+                                    <div
+                                        style={{
+                                            fontSize:
+                                                "14px",
+                                            fontWeight:
+                                                700
+                                        }}
+                                    >
+                                        & Orders
+                                    </div>
+
+                                </Link>
+
+
+                                {/* =========================
+                                    CART
+                                ========================= */}
+
+                                <Link
+                                    to={
+                                        isAuthenticated
+                                            ? "/cart"
+                                            : "/login"
+                                    }
+                                    className="text-decoration-none d-flex align-items-end"
+                                    style={{
+                                        color:
+                                            "#1769aa",
+                                        padding:
+                                            "5px 8px",
+                                        whiteSpace:
+                                            "nowrap"
+                                    }}
+                                >
+
+                                    <span
+                                        style={{
+                                            fontSize:
+                                                "27px",
+                                            marginRight:
+                                                "4px"
+                                        }}
+                                    >
+                                        🛒
+                                    </span>
+
+
+                                    <strong
+                                        style={{
+                                            fontSize:
+                                                "14px"
+                                        }}
+                                    >
+                                        Cart
+                                    </strong>
+
+                                </Link>
+
 
                             </div>
 
@@ -567,11 +1116,52 @@ const { clearCart } = useAppContext();
 
                     </div>
 
-                </div>
+                </nav>
 
-            </nav>
+            </header>
 
-        </header>
+
+            {/* =========================
+                DROPDOWN FIX
+            ========================= */}
+
+            <style>
+                {`
+                    .navbar .dropdown-menu {
+                        background-color: #ffffff !important;
+                        opacity: 1 !important;
+                        backdrop-filter: none !important;
+                        -webkit-backdrop-filter: none !important;
+                    }
+
+                    .navbar .dropdown-item {
+                        background-color: #ffffff !important;
+                        color: #172b4d !important;
+                        opacity: 1 !important;
+                    }
+
+                    .navbar .dropdown-item:hover,
+                    .navbar .dropdown-item:focus {
+                        background-color: #eaf4ff !important;
+                        color: #1769aa !important;
+                    }
+
+                    .navbar .dropdown-divider {
+                        border-top-color: #e5e7eb !important;
+                    }
+
+                    .navbar .dropdown-toggle:hover {
+                        color: #1769aa !important;
+                    }
+
+                    .navbar a:hover {
+                        text-decoration: none;
+                    }
+                `}
+            </style>
+
+        </>
+
     );
 };
 

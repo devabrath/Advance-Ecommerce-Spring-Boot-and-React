@@ -915,11 +915,11 @@ const Profile: React.FC = () => {
 
 
                                 <div
-                                    className="d-flex gap-2"
+                                    className="d-flex gap-2" style={{height : "40px"}}
                                 >
 
                                     <Button
-                                        size="sm"
+                                        size="sm" 
                                         variant="outline-primary"
                                         onClick={() =>
                                             openEditAddress(

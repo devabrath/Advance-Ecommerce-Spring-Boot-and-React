@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import API from "../axios";
 
 interface ProductForm {
@@ -14,6 +15,8 @@ interface ProductForm {
 
 const AddProduct = () => {
 
+    const navigate = useNavigate();
+
     const [product, setProduct] =
         useState<ProductForm>({
             name: "",
@@ -23,11 +26,15 @@ const AddProduct = () => {
             categoryId: "",
             stockQuantity: "",
             releaseDate: "",
-            productAvailable: false
+            productAvailable: true
         });
 
     const [image, setImage] =
         useState<File | null>(null);
+
+    const [loading, setLoading] =
+        useState(false);
+
 
     const handleInputChange = (
         e: React.ChangeEvent<
@@ -40,11 +47,12 @@ const AddProduct = () => {
             value
         } = e.target;
 
-        setProduct((previous) => ({
+        setProduct(previous => ({
             ...previous,
             [name]: value
         }));
     };
+
 
     const handleImageChange = (
         e: React.ChangeEvent<HTMLInputElement>
@@ -56,47 +64,62 @@ const AddProduct = () => {
         setImage(file);
     };
 
+
     const submitHandler = async (
         event: React.FormEvent<HTMLFormElement>
     ): Promise<void> => {
 
         event.preventDefault();
 
+        if (!image) {
+            alert("Please select a product image");
+            return;
+        }
+
+        if (!product.categoryId) {
+            alert("Please select a category");
+            return;
+        }
+
         try {
 
-            if (!image) {
-                alert("Please select a product image");
-                return;
-            }
-
-            if (!product.categoryId) {
-                alert("Please select a category");
-                return;
-            }
+            setLoading(true);
 
             const productRequest = {
+
                 name: product.name,
+
                 brand: product.brand,
+
                 description: product.description,
+
                 price: Number(product.price),
-                categoryId: Number(product.categoryId),
+
+                categoryId:
+                    Number(product.categoryId),
+
                 stockQuantity:
                     Number(product.stockQuantity),
+
                 releaseDate:
                     product.releaseDate
                         ? `${product.releaseDate}T00:00:00`
                         : null,
+
                 productAvailable:
                     product.productAvailable
             };
 
+
             const formData =
                 new FormData();
+
 
             formData.append(
                 "imageFile",
                 image
             );
+
 
             formData.append(
                 "product",
@@ -113,62 +136,84 @@ const AddProduct = () => {
                 )
             );
 
+
             const response =
                 await API.post(
-                    "/admin/products",
+                    "/vendor/products",
                     formData
                 );
 
+
             console.log(
-                "Product added successfully:",
+                "Vendor product added:",
                 response.data
             );
 
+
             alert(
-                "Product added successfully"
+                "Product added successfully!"
             );
 
-            setProduct({
-                name: "",
-                brand: "",
-                description: "",
-                price: "",
-                categoryId: "",
-                stockQuantity: "",
-                releaseDate: "",
-                productAvailable: false
-            });
 
-            setImage(null);
+            navigate(
+                "/vendor/products"
+            );
 
-        } catch (error) {
+
+        } catch (error: any) {
 
             console.error(
-                "Error adding product:",
+                "Error adding vendor product:",
                 error
             );
 
+            const message =
+                error?.response?.data;
+
             alert(
-                "Error adding product"
+                typeof message === "string"
+                    ? message
+                    : "Error adding product"
             );
+
+        } finally {
+
+            setLoading(false);
         }
     };
 
-    return (
-        <div className="container">
 
-            <div className="center-container">
+    return (
+
+        <div
+            className="container"
+            style={{
+                marginTop: "100px",
+                marginBottom: "50px"
+            }}
+        >
+
+            <div
+                className="center-container"
+            >
+
+                <h2 className="mb-4">
+                    Add Product
+                </h2>
+
 
                 <form
-                    className="row g-3 pt-5"
+                    className="row g-3"
                     onSubmit={submitHandler}
                 >
 
-                    {/* Name */}
+
+                    {/* NAME */}
+
                     <div className="col-md-6">
 
                         <label className="form-label">
-                            <h6>Name</h6>
+                            Product Name
                         </label>
 
                         <input
@@ -187,42 +232,42 @@ const AddProduct = () => {
 
                     </div>
 
-                    {/* Brand */}
+
+                    {/* BRAND */}
+
                     <div className="col-md-6">
 
                         <label className="form-label">
-                            <h6>Brand</h6>
+                            Brand
                         </label>
 
                         <input
                             type="text"
                             name="brand"
                             className="form-control"
-                            placeholder="Enter your Brand"
+                            placeholder="Brand"
                             value={
                                 product.brand
                             }
                             onChange={
                                 handleInputChange
                             }
-                            id="brand"
                         />
 
                     </div>
 
-                    {/* Description */}
+
+                    {/* DESCRIPTION */}
+
                     <div className="col-12">
 
                         <label className="form-label">
-                            <h6>
-                                Description
-                            </h6>
+                            Description
                         </label>
 
-                        <input
-                            type="text"
+                        <textarea
                             className="form-control"
-                            placeholder="Add product description"
+                            placeholder="Product description"
                             value={
                                 product.description
                             }
@@ -230,22 +275,24 @@ const AddProduct = () => {
                             onChange={
                                 handleInputChange
                             }
-                            id="description"
+                            rows={3}
                         />
 
                     </div>
 
-                    {/* Price */}
-                    <div className="col-5">
+
+                    {/* PRICE */}
+
+                    <div className="col-md-4">
 
                         <label className="form-label">
-                            <h6>Price</h6>
+                            Price
                         </label>
 
                         <input
                             type="number"
                             className="form-control"
-                            placeholder="Eg: 1000"
+                            placeholder="Eg: 69999"
                             onChange={
                                 handleInputChange
                             }
@@ -253,21 +300,20 @@ const AddProduct = () => {
                                 product.price
                             }
                             name="price"
-                            id="price"
-                            min="0"
+                            min="0.01"
                             step="0.01"
                             required
                         />
 
                     </div>
 
-                    {/* Category */}
-                    <div className="col-md-6">
+
+                    {/* CATEGORY */}
+
+                    <div className="col-md-4">
 
                         <label className="form-label">
-                            <h6>
-                                Category
-                            </h6>
+                            Category
                         </label>
 
                         <select
@@ -279,7 +325,6 @@ const AddProduct = () => {
                                 handleInputChange
                             }
                             name="categoryId"
-                            id="categoryId"
                             required
                         >
 
@@ -315,19 +360,19 @@ const AddProduct = () => {
 
                     </div>
 
-                    {/* Stock */}
+
+                    {/* STOCK */}
+
                     <div className="col-md-4">
 
                         <label className="form-label">
-                            <h6>
-                                Stock Quantity
-                            </h6>
+                            Stock Quantity
                         </label>
 
                         <input
                             type="number"
                             className="form-control"
-                            placeholder="Stock Remaining"
+                            placeholder="Stock"
                             onChange={
                                 handleInputChange
                             }
@@ -335,20 +380,19 @@ const AddProduct = () => {
                                 product.stockQuantity
                             }
                             name="stockQuantity"
-                            id="stockQuantity"
                             min="0"
                             required
                         />
 
                     </div>
 
-                    {/* Release Date */}
-                    <div className="col-md-4">
+
+                    {/* RELEASE DATE */}
+
+                    <div className="col-md-6">
 
                         <label className="form-label">
-                            <h6>
-                                Release Date
-                            </h6>
+                            Release Date
                         </label>
 
                         <input
@@ -361,16 +405,17 @@ const AddProduct = () => {
                             onChange={
                                 handleInputChange
                             }
-                            id="releaseDate"
                         />
 
                     </div>
 
-                    {/* Image */}
-                    <div className="col-md-4">
+
+                    {/* IMAGE */}
+
+                    <div className="col-md-6">
 
                         <label className="form-label">
-                            <h6>Image</h6>
+                            Product Image
                         </label>
 
                         <input
@@ -385,7 +430,9 @@ const AddProduct = () => {
 
                     </div>
 
-                    {/* Availability */}
+
+                    {/* AVAILABILITY */}
+
                     <div className="col-12">
 
                         <div className="form-check">
@@ -394,22 +441,16 @@ const AddProduct = () => {
                                 className="form-check-input"
                                 type="checkbox"
                                 name="productAvailable"
-                                id="gridCheck"
+                                id="productAvailable"
                                 checked={
                                     product.productAvailable
                                 }
-                                onChange={(
-                                    e
-                                ) =>
+                                onChange={e =>
                                     setProduct(
-                                        (
-                                            previous
-                                        ) => ({
+                                        previous => ({
                                             ...previous,
                                             productAvailable:
-                                                e
-                                                    .target
-                                                    .checked
+                                                e.target.checked
                                         })
                                     )
                                 }
@@ -417,7 +458,7 @@ const AddProduct = () => {
 
                             <label
                                 className="form-check-label"
-                                htmlFor="gridCheck"
+                                htmlFor="productAvailable"
                             >
                                 Product Available
                             </label>
@@ -426,14 +467,21 @@ const AddProduct = () => {
 
                     </div>
 
-                    {/* Submit */}
+
+                    {/* BUTTON */}
+
                     <div className="col-12">
 
                         <button
                             type="submit"
                             className="btn btn-primary"
+                            disabled={loading}
                         >
-                            Submit
+
+                            {loading
+                                ? "Adding..."
+                                : "Add Product"}
+
                         </button>
 
                     </div>
