@@ -23,6 +23,29 @@ interface Address {
     defaultAddress: boolean;
 }
 
+interface ProfileData {
+    token: string;
+    userId: number;
+    firstName: string;
+    lastName?: string;
+    email: string;
+    phone?: string;
+    role: string;
+}
+
+interface ProfileForm {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+}
+
+interface PasswordForm {
+    currentPassword: string;
+    newPassword: string;
+    confirmPassword: string;
+}
+
 interface AddressForm {
     fullName: string;
     phone: string;
@@ -35,7 +58,7 @@ interface AddressForm {
     defaultAddress: boolean;
 }
 
-const emptyForm: AddressForm = {
+const emptyAddress: AddressForm = {
     fullName: "",
     phone: "",
     addressLine: "",
@@ -49,7 +72,28 @@ const emptyForm: AddressForm = {
 
 const Profile: React.FC = () => {
 
-    const { user } = useAuth();
+    const {
+        user,
+        login
+    } = useAuth();
+
+    const [profile, setProfile] =
+        useState<ProfileData | null>(null);
+
+    const [profileForm, setProfileForm] =
+        useState<ProfileForm>({
+            firstName: "",
+            lastName: "",
+            email: "",
+            phone: ""
+        });
+
+    const [passwordForm, setPasswordForm] =
+        useState<PasswordForm>({
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: ""
+        });
 
     const [addresses, setAddresses] =
         useState<Address[]>([]);
@@ -57,20 +101,91 @@ const Profile: React.FC = () => {
     const [loading, setLoading] =
         useState(true);
 
+    const [savingProfile, setSavingProfile] =
+        useState(false);
+
+    const [changingPassword, setChangingPassword] =
+        useState(false);
+
+    const [addressLoading, setAddressLoading] =
+        useState(false);
+
     const [error, setError] =
         useState("");
 
-    const [showModal, setShowModal] =
+    const [showProfileEdit, setShowProfileEdit] =
         useState(false);
 
-    const [editingId, setEditingId] =
+    const [showPasswordModal, setShowPasswordModal] =
+        useState(false);
+
+    const [showAddressModal, setShowAddressModal] =
+        useState(false);
+
+    const [editingAddressId, setEditingAddressId] =
         useState<number | null>(null);
 
-    const [form, setForm] =
-        useState<AddressForm>(emptyForm);
+    const [addressForm, setAddressForm] =
+        useState<AddressForm>(emptyAddress);
 
-    const [saving, setSaving] =
-        useState(false);
+
+    /*
+     * =========================
+     * LOAD PROFILE
+     * =========================
+     */
+
+    const fetchProfile = async () => {
+
+        try {
+
+            setLoading(true);
+            setError("");
+
+            const response =
+                await API.get<ProfileData>(
+                    "/customer/profile"
+                );
+
+            console.log(
+                "PROFILE:",
+                response.data
+            );
+
+            setProfile(response.data);
+
+            setProfileForm({
+                firstName:
+                    response.data.firstName || "",
+
+                lastName:
+                    response.data.lastName || "",
+
+                email:
+                    response.data.email || "",
+
+                phone:
+                    response.data.phone || ""
+            });
+
+        } catch (error: any) {
+
+            console.error(
+                "Profile error:",
+                error
+            );
+
+            setError(
+                error?.response?.data ||
+                "Unable to load profile."
+            );
+
+        } finally {
+
+            setLoading(false);
+
+        }
+    };
 
 
     /*
@@ -83,36 +198,25 @@ const Profile: React.FC = () => {
 
         try {
 
-            setLoading(true);
-            setError("");
+            setAddressLoading(true);
 
             const response =
                 await API.get<Address[]>(
                     "/customer/addresses"
                 );
 
-            console.log(
-                "ADDRESSES:",
-                response.data
-            );
-
             setAddresses(response.data);
 
         } catch (error: any) {
 
             console.error(
-                "Error loading addresses:",
+                "Address error:",
                 error
-            );
-
-            setError(
-                error?.response?.data ||
-                "Unable to load your addresses."
             );
 
         } finally {
 
-            setLoading(false);
+            setAddressLoading(false);
 
         }
     };
@@ -120,6 +224,7 @@ const Profile: React.FC = () => {
 
     useEffect(() => {
 
+        fetchProfile();
         fetchAddresses();
 
     }, []);
@@ -127,11 +232,198 @@ const Profile: React.FC = () => {
 
     /*
      * =========================
-     * FORM CHANGE
+     * PROFILE CHANGE
      * =========================
      */
 
-    const handleChange = (
+    const handleProfileChange = (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+
+        const {
+            name,
+            value
+        } = e.target;
+
+        setProfileForm({
+            ...profileForm,
+            [name]: value
+        });
+    };
+
+
+    /*
+     * =========================
+     * UPDATE PROFILE
+     * =========================
+     */
+
+    const updateProfile = async (
+        e: React.FormEvent
+    ) => {
+
+        e.preventDefault();
+
+        try {
+
+            setSavingProfile(true);
+
+            const response =
+                await API.put<ProfileData>(
+                    "/customer/profile",
+                    profileForm
+                );
+
+            console.log(
+                "UPDATED PROFILE:",
+                response.data
+            );
+
+            /*
+             * Save new JWT + user details.
+             */
+
+            login({
+                token:
+                    response.data.token,
+
+                userId:
+                    response.data.userId,
+
+                firstName:
+                    response.data.firstName,
+
+                email:
+                    response.data.email,
+
+                role:
+                    response.data.role
+            });
+
+            setProfile(
+                response.data
+            );
+
+            setShowProfileEdit(false);
+
+            alert(
+                "Profile updated successfully."
+            );
+
+        } catch (error: any) {
+
+            console.error(
+                "Update profile error:",
+                error
+            );
+
+            alert(
+                error?.response?.data ||
+                "Unable to update profile."
+            );
+
+        } finally {
+
+            setSavingProfile(false);
+
+        }
+    };
+
+
+    /*
+     * =========================
+     * PASSWORD CHANGE
+     * =========================
+     */
+
+    const handlePasswordChange = (
+        e: React.ChangeEvent<HTMLInputElement>
+    ) => {
+
+        const {
+            name,
+            value
+        } = e.target;
+
+        setPasswordForm({
+            ...passwordForm,
+            [name]: value
+        });
+    };
+
+
+    const changePassword = async (
+        e: React.FormEvent
+    ) => {
+
+        e.preventDefault();
+
+        if (
+            passwordForm.newPassword !==
+            passwordForm.confirmPassword
+        ) {
+
+            alert(
+                "New passwords do not match."
+            );
+
+            return;
+        }
+
+        try {
+
+            setChangingPassword(true);
+
+            await API.put(
+                "/customer/profile/password",
+                {
+                    currentPassword:
+                        passwordForm.currentPassword,
+
+                    newPassword:
+                        passwordForm.newPassword
+                }
+            );
+
+            alert(
+                "Password changed successfully."
+            );
+
+            setPasswordForm({
+                currentPassword: "",
+                newPassword: "",
+                confirmPassword: ""
+            });
+
+            setShowPasswordModal(false);
+
+        } catch (error: any) {
+
+            console.error(
+                "Password error:",
+                error
+            );
+
+            alert(
+                error?.response?.data ||
+                "Unable to change password."
+            );
+
+        } finally {
+
+            setChangingPassword(false);
+
+        }
+    };
+
+
+    /*
+     * =========================
+     * ADDRESS FORM
+     * =========================
+     */
+
+    const handleAddressChange = (
         e: React.ChangeEvent<
             HTMLInputElement |
             HTMLSelectElement |
@@ -139,11 +431,13 @@ const Profile: React.FC = () => {
         >
     ) => {
 
-        const { name, value } =
-            e.target;
+        const {
+            name,
+            value
+        } = e.target;
 
-        setForm({
-            ...form,
+        setAddressForm({
+            ...addressForm,
             [name]: value
         });
     };
@@ -153,8 +447,8 @@ const Profile: React.FC = () => {
         e: React.ChangeEvent<HTMLInputElement>
     ) => {
 
-        setForm({
-            ...form,
+        setAddressForm({
+            ...addressForm,
             defaultAddress:
                 e.target.checked
         });
@@ -163,52 +457,72 @@ const Profile: React.FC = () => {
 
     /*
      * =========================
-     * OPEN ADD
+     * ADD ADDRESS
      * =========================
      */
 
-    const openAddModal = () => {
+    const openAddAddress = () => {
 
-        setEditingId(null);
+        setEditingAddressId(null);
 
-        setForm({
-            ...emptyForm,
+        setAddressForm({
+            ...emptyAddress,
             fullName:
-                `${user?.firstName || ""}`.trim()
+                `${profile?.firstName || ""} ${
+                    profile?.lastName || ""
+                }`.trim(),
+            phone:
+                profile?.phone || ""
         });
 
-        setShowModal(true);
+        setShowAddressModal(true);
     };
 
 
     /*
      * =========================
-     * OPEN EDIT
+     * EDIT ADDRESS
      * =========================
      */
 
-    const openEditModal = (
+    const openEditAddress = (
         address: Address
     ) => {
 
-        setEditingId(address.id);
+        setEditingAddressId(
+            address.id
+        );
 
-        setForm({
-            fullName: address.fullName,
-            phone: address.phone,
-            addressLine: address.addressLine,
-            city: address.city,
-            state: address.state,
-            postalCode: address.postalCode,
+        setAddressForm({
+            fullName:
+                address.fullName,
+
+            phone:
+                address.phone,
+
+            addressLine:
+                address.addressLine,
+
+            city:
+                address.city,
+
+            state:
+                address.state,
+
+            postalCode:
+                address.postalCode,
+
             landmark:
                 address.landmark || "",
+
             addressType:
                 address.addressType,
+
             defaultAddress:
                 address.defaultAddress
         });
 
-        setShowModal(true);
+        setShowAddressModal(true);
     };
 
 
@@ -226,13 +540,11 @@ const Profile: React.FC = () => {
 
         try {
 
-            setSaving(true);
-
-            if (editingId === null) {
+            if (editingAddressId === null) {
 
                 await API.post(
                     "/customer/addresses",
-                    form
+                    addressForm
                 );
 
                 alert(
@@ -242,8 +554,8 @@ const Profile: React.FC = () => {
             } else {
 
                 await API.put(
-                    `/customer/addresses/${editingId}`,
-                    form
+                    `/customer/addresses/${editingAddressId}`,
+                    addressForm
                 );
 
                 alert(
@@ -251,18 +563,20 @@ const Profile: React.FC = () => {
                 );
             }
 
-            setShowModal(false);
+            setShowAddressModal(false);
 
-            setEditingId(null);
+            setEditingAddressId(null);
 
-            setForm(emptyForm);
+            setAddressForm(
+                emptyAddress
+            );
 
             await fetchAddresses();
 
         } catch (error: any) {
 
             console.error(
-                "Error saving address:",
+                "Save address error:",
                 error
             );
 
@@ -270,10 +584,6 @@ const Profile: React.FC = () => {
                 error?.response?.data ||
                 "Unable to save address."
             );
-
-        } finally {
-
-            setSaving(false);
 
         }
     };
@@ -289,12 +599,12 @@ const Profile: React.FC = () => {
         id: number
     ) => {
 
-        const confirmed =
-            window.confirm(
+        if (
+            !window.confirm(
                 "Are you sure you want to delete this address?"
-            );
+            )
+        ) {
 
-        if (!confirmed) {
             return;
         }
 
@@ -313,7 +623,7 @@ const Profile: React.FC = () => {
         } catch (error: any) {
 
             console.error(
-                "Error deleting address:",
+                "Delete address error:",
                 error
             );
 
@@ -353,12 +663,6 @@ const Profile: React.FC = () => {
     }
 
 
-    /*
-     * =========================
-     * PAGE
-     * =========================
-     */
-
     return (
 
         <div
@@ -372,9 +676,18 @@ const Profile: React.FC = () => {
             }}
         >
 
-            {/* PROFILE */}
+            {error && (
+                <Alert variant="danger">
+                    {error}
+                </Alert>
+            )}
 
-            <Card className="mb-4 shadow-sm">
+
+            {/* ========================= */}
+            {/* PROFILE */}
+            {/* ========================= */}
+
+            <Card className="mb-4 shadow-sm" style={{width: "auto"}}>
 
                 <Card.Body>
 
@@ -382,36 +695,80 @@ const Profile: React.FC = () => {
                         className="d-flex justify-content-between align-items-center"
                     >
 
-                        <div>
+                        <h3>
+                            My Profile
+                        </h3>
 
-                            <h3>
-                                My Profile
-                            </h3>
+                        <Button
+                            variant="primary"
+                            onClick={() =>
+                                setShowProfileEdit(true)
+                            }
+                        >
+                            Edit Profile
+                        </Button>
 
-                            <p className="mb-1">
+                    </div>
+
+                    <hr />
+
+                    <div className="row">
+
+                        <div className="col-md-6">
+
+                            <p>
                                 <strong>
-                                    Name:
+                                    First Name:
                                 </strong>{" "}
-                                {user?.firstName}
+                                {profile?.firstName}
                             </p>
 
-                            <p className="mb-0">
+                            <p>
+                                <strong>
+                                    Last Name:
+                                </strong>{" "}
+                                {profile?.lastName || "-"}
+                            </p>
+
+                        </div>
+
+                        <div className="col-md-6">
+
+                            <p>
                                 <strong>
                                     Email:
                                 </strong>{" "}
-                                {user?.email}
+                                {profile?.email}
+                            </p>
+
+                            <p>
+                                <strong>
+                                    Phone:
+                                </strong>{" "}
+                                {profile?.phone || "-"}
                             </p>
 
                         </div>
 
                     </div>
 
+                    <Button
+                        variant="outline-danger"
+                        onClick={() =>
+                            setShowPasswordModal(true)
+                        }
+                    >
+                        Change Password
+                    </Button>
+
                 </Card.Body>
 
             </Card>
 
 
+            {/* ========================= */}
             {/* ADDRESSES */}
+            {/* ========================= */}
 
             <div
                 className="d-flex justify-content-between align-items-center mb-3"
@@ -422,8 +779,7 @@ const Profile: React.FC = () => {
                 </h3>
 
                 <Button
-                    variant="primary"
-                    onClick={openAddModal}
+                    onClick={openAddAddress}
                 >
                     + Add Address
                 </Button>
@@ -431,43 +787,43 @@ const Profile: React.FC = () => {
             </div>
 
 
-            {error && (
+            {addressLoading && (
 
-                <Alert variant="danger">
-                    {error}
-                </Alert>
+                <div className="text-center mb-3">
+
+                    <Spinner
+                        animation="border"
+                        size="sm"
+                    />
+
+                </div>
 
             )}
 
 
-            {addresses.length === 0 && !error && (
+            {addresses.length === 0 &&
+                !addressLoading && (
 
-                <Card className="shadow-sm">
+                    <Card className="mb-4" style={{width: "auto"}}>
 
-                    <Card.Body
-                        className="text-center"
-                    >
-
-                        <h5>
-                            No saved addresses
-                        </h5>
-
-                        <p className="text-muted">
-                            Add an address for faster
-                            checkout.
-                        </p>
-
-                        <Button
-                            onClick={openAddModal}
+                        <Card.Body
+                            className="text-center"
                         >
-                            Add Your First Address
-                        </Button>
 
-                    </Card.Body>
+                            <h5>
+                                No saved addresses
+                            </h5>
 
-                </Card>
+                            <p>
+                                Add an address for
+                                faster checkout.
+                            </p>
 
-            )}
+                        </Card.Body>
+
+                    </Card>
+
+                )}
 
 
             {addresses.map(
@@ -475,8 +831,7 @@ const Profile: React.FC = () => {
 
                     <Card
                         key={address.id}
-                        className="mb-3 shadow-sm"
-                    >
+                        className="mb-3 shadow-sm" style={{width: "auto"}}>
 
                         <Card.Body>
 
@@ -487,7 +842,7 @@ const Profile: React.FC = () => {
                                 <div>
 
                                     <div
-                                        className="d-flex align-items-center gap-2 mb-2"
+                                        className="d-flex gap-2 align-items-center mb-2"
                                     >
 
                                         <h5 className="mb-0">
@@ -496,9 +851,7 @@ const Profile: React.FC = () => {
                                             }
                                         </h5>
 
-                                        <span
-                                            className="badge bg-secondary"
-                                        >
+                                        <span className="badge bg-secondary">
                                             {
                                                 address.addressType
                                             }
@@ -506,16 +859,13 @@ const Profile: React.FC = () => {
 
                                         {address.defaultAddress && (
 
-                                            <span
-                                                className="badge bg-success"
-                                            >
+                                            <span className="badge bg-success">
                                                 Default
                                             </span>
 
                                         )}
 
                                     </div>
-
 
                                     <p className="mb-1">
                                         {
@@ -565,14 +915,14 @@ const Profile: React.FC = () => {
 
 
                                 <div
-                                    className="d-flex gap-2 align-items-start"
+                                    className="d-flex gap-2"
                                 >
 
                                     <Button
-                                        variant="outline-primary"
                                         size="sm"
+                                        variant="outline-primary"
                                         onClick={() =>
-                                            openEditModal(
+                                            openEditAddress(
                                                 address
                                             )
                                         }
@@ -581,8 +931,8 @@ const Profile: React.FC = () => {
                                     </Button>
 
                                     <Button
-                                        variant="outline-danger"
                                         size="sm"
+                                        variant="outline-danger"
                                         onClick={() =>
                                             deleteAddress(
                                                 address.id
@@ -604,12 +954,270 @@ const Profile: React.FC = () => {
             )}
 
 
-            {/* ADDRESS MODAL */}
+            {/* ========================= */}
+            {/* EDIT PROFILE MODAL */}
+            {/* ========================= */}
 
             <Modal
-                show={showModal}
+                show={showProfileEdit}
                 onHide={() =>
-                    setShowModal(false)
+                    setShowProfileEdit(false)
+                }
+            >
+
+                <Form
+                    onSubmit={updateProfile}
+                >
+
+                    <Modal.Header closeButton>
+
+                        <Modal.Title>
+                            Edit Profile
+                        </Modal.Title>
+
+                    </Modal.Header>
+
+                    <Modal.Body>
+
+                        <Form.Group className="mb-3">
+
+                            <Form.Label>
+                                First Name
+                            </Form.Label>
+
+                            <Form.Control
+                                name="firstName"
+                                value={
+                                    profileForm.firstName
+                                }
+                                onChange={
+                                    handleProfileChange
+                                }
+                                required
+                            />
+
+                        </Form.Group>
+
+
+                        <Form.Group className="mb-3">
+
+                            <Form.Label>
+                                Last Name
+                            </Form.Label>
+
+                            <Form.Control
+                                name="lastName"
+                                value={
+                                    profileForm.lastName
+                                }
+                                onChange={
+                                    handleProfileChange
+                                }
+                                required
+                            />
+
+                        </Form.Group>
+
+
+                        <Form.Group className="mb-3">
+
+                            <Form.Label>
+                                Email
+                            </Form.Label>
+
+                            <Form.Control
+                                type="email"
+                                name="email"
+                                value={
+                                    profileForm.email
+                                }
+                                onChange={
+                                    handleProfileChange
+                                }
+                                required
+                            />
+
+                        </Form.Group>
+
+
+                        <Form.Group className="mb-3">
+
+                            <Form.Label>
+                                Phone Number
+                            </Form.Label>
+
+                            <Form.Control
+                                type="tel"
+                                name="phone"
+                                value={
+                                    profileForm.phone
+                                }
+                                onChange={
+                                    handleProfileChange
+                                }
+                            />
+
+                        </Form.Group>
+
+                    </Modal.Body>
+
+                    <Modal.Footer>
+
+                        <Button
+                            variant="secondary"
+                            onClick={() =>
+                                setShowProfileEdit(false)
+                            }
+                        >
+                            Cancel
+                        </Button>
+
+                        <Button
+                            type="submit"
+                            variant="primary"
+                            disabled={savingProfile}
+                        >
+                            {savingProfile
+                                ? "Saving..."
+                                : "Save Changes"}
+                        </Button>
+
+                    </Modal.Footer>
+
+                </Form>
+
+            </Modal>
+
+
+            {/* ========================= */}
+            {/* CHANGE PASSWORD MODAL */}
+            {/* ========================= */}
+
+            <Modal
+                show={showPasswordModal}
+                onHide={() =>
+                    setShowPasswordModal(false)
+                }
+            >
+
+                <Form
+                    onSubmit={changePassword}
+                >
+
+                    <Modal.Header closeButton>
+
+                        <Modal.Title>
+                            Change Password
+                        </Modal.Title>
+
+                    </Modal.Header>
+
+                    <Modal.Body>
+
+                        <Form.Group className="mb-3">
+
+                            <Form.Label>
+                                Current Password
+                            </Form.Label>
+
+                            <Form.Control
+                                type="password"
+                                name="currentPassword"
+                                value={
+                                    passwordForm.currentPassword
+                                }
+                                onChange={
+                                    handlePasswordChange
+                                }
+                                required
+                            />
+
+                        </Form.Group>
+
+
+                        <Form.Group className="mb-3">
+
+                            <Form.Label>
+                                New Password
+                            </Form.Label>
+
+                            <Form.Control
+                                type="password"
+                                name="newPassword"
+                                value={
+                                    passwordForm.newPassword
+                                }
+                                onChange={
+                                    handlePasswordChange
+                                }
+                                minLength={6}
+                                required
+                            />
+
+                        </Form.Group>
+
+
+                        <Form.Group>
+
+                            <Form.Label>
+                                Confirm New Password
+                            </Form.Label>
+
+                            <Form.Control
+                                type="password"
+                                name="confirmPassword"
+                                value={
+                                    passwordForm.confirmPassword
+                                }
+                                onChange={
+                                    handlePasswordChange
+                                }
+                                minLength={6}
+                                required
+                            />
+
+                        </Form.Group>
+
+                    </Modal.Body>
+
+                    <Modal.Footer>
+
+                        <Button
+                            variant="secondary"
+                            onClick={() =>
+                                setShowPasswordModal(false)
+                            }
+                        >
+                            Cancel
+                        </Button>
+
+                        <Button
+                            type="submit"
+                            variant="danger"
+                            disabled={
+                                changingPassword
+                            }
+                        >
+                            {changingPassword
+                                ? "Changing..."
+                                : "Change Password"}
+                        </Button>
+
+                    </Modal.Footer>
+
+                </Form>
+
+            </Modal>
+
+
+            {/* ========================= */}
+            {/* ADDRESS MODAL */}
+            {/* ========================= */}
+
+            <Modal
+                show={showAddressModal}
+                onHide={() =>
+                    setShowAddressModal(false)
                 }
                 size="lg"
             >
@@ -622,7 +1230,7 @@ const Profile: React.FC = () => {
 
                         <Modal.Title>
 
-                            {editingId === null
+                            {editingAddressId === null
                                 ? "Add Address"
                                 : "Edit Address"}
 
@@ -630,219 +1238,180 @@ const Profile: React.FC = () => {
 
                     </Modal.Header>
 
-
                     <Modal.Body>
 
                         <div className="row g-3">
 
                             <div className="col-md-6">
 
-                                <Form.Group>
+                                <Form.Label>
+                                    Full Name
+                                </Form.Label>
 
-                                    <Form.Label>
-                                        Full Name
-                                    </Form.Label>
-
-                                    <Form.Control
-                                        type="text"
-                                        name="fullName"
-                                        value={
-                                            form.fullName
-                                        }
-                                        onChange={
-                                            handleChange
-                                        }
-                                        required
-                                    />
-
-                                </Form.Group>
+                                <Form.Control
+                                    name="fullName"
+                                    value={
+                                        addressForm.fullName
+                                    }
+                                    onChange={
+                                        handleAddressChange
+                                    }
+                                    required
+                                />
 
                             </div>
 
 
                             <div className="col-md-6">
 
-                                <Form.Group>
+                                <Form.Label>
+                                    Phone
+                                </Form.Label>
 
-                                    <Form.Label>
-                                        Phone
-                                    </Form.Label>
-
-                                    <Form.Control
-                                        type="tel"
-                                        name="phone"
-                                        value={
-                                            form.phone
-                                        }
-                                        onChange={
-                                            handleChange
-                                        }
-                                        required
-                                    />
-
-                                </Form.Group>
+                                <Form.Control
+                                    name="phone"
+                                    value={
+                                        addressForm.phone
+                                    }
+                                    onChange={
+                                        handleAddressChange
+                                    }
+                                    required
+                                />
 
                             </div>
 
 
                             <div className="col-12">
 
-                                <Form.Group>
+                                <Form.Label>
+                                    Address
+                                </Form.Label>
 
-                                    <Form.Label>
-                                        Address
-                                    </Form.Label>
-
-                                    <Form.Control
-                                        as="textarea"
-                                        rows={2}
-                                        name="addressLine"
-                                        value={
-                                            form.addressLine
-                                        }
-                                        onChange={
-                                            handleChange
-                                        }
-                                        required
-                                    />
-
-                                </Form.Group>
+                                <Form.Control
+                                    as="textarea"
+                                    rows={2}
+                                    name="addressLine"
+                                    value={
+                                        addressForm.addressLine
+                                    }
+                                    onChange={
+                                        handleAddressChange
+                                    }
+                                    required
+                                />
 
                             </div>
 
 
                             <div className="col-md-4">
 
-                                <Form.Group>
+                                <Form.Label>
+                                    City
+                                </Form.Label>
 
-                                    <Form.Label>
-                                        City
-                                    </Form.Label>
-
-                                    <Form.Control
-                                        type="text"
-                                        name="city"
-                                        value={
-                                            form.city
-                                        }
-                                        onChange={
-                                            handleChange
-                                        }
-                                        required
-                                    />
-
-                                </Form.Group>
+                                <Form.Control
+                                    name="city"
+                                    value={
+                                        addressForm.city
+                                    }
+                                    onChange={
+                                        handleAddressChange
+                                    }
+                                    required
+                                />
 
                             </div>
 
 
                             <div className="col-md-4">
 
-                                <Form.Group>
+                                <Form.Label>
+                                    State
+                                </Form.Label>
 
-                                    <Form.Label>
-                                        State
-                                    </Form.Label>
-
-                                    <Form.Control
-                                        type="text"
-                                        name="state"
-                                        value={
-                                            form.state
-                                        }
-                                        onChange={
-                                            handleChange
-                                        }
-                                        required
-                                    />
-
-                                </Form.Group>
+                                <Form.Control
+                                    name="state"
+                                    value={
+                                        addressForm.state
+                                    }
+                                    onChange={
+                                        handleAddressChange
+                                    }
+                                    required
+                                />
 
                             </div>
 
 
                             <div className="col-md-4">
 
-                                <Form.Group>
+                                <Form.Label>
+                                    Postal Code
+                                </Form.Label>
 
-                                    <Form.Label>
-                                        Postal Code
-                                    </Form.Label>
-
-                                    <Form.Control
-                                        type="text"
-                                        name="postalCode"
-                                        value={
-                                            form.postalCode
-                                        }
-                                        onChange={
-                                            handleChange
-                                        }
-                                        required
-                                    />
-
-                                </Form.Group>
+                                <Form.Control
+                                    name="postalCode"
+                                    value={
+                                        addressForm.postalCode
+                                    }
+                                    onChange={
+                                        handleAddressChange
+                                    }
+                                    required
+                                />
 
                             </div>
 
 
                             <div className="col-md-6">
 
-                                <Form.Group>
+                                <Form.Label>
+                                    Landmark
+                                </Form.Label>
 
-                                    <Form.Label>
-                                        Landmark
-                                    </Form.Label>
-
-                                    <Form.Control
-                                        type="text"
-                                        name="landmark"
-                                        value={
-                                            form.landmark
-                                        }
-                                        onChange={
-                                            handleChange
-                                        }
-                                    />
-
-                                </Form.Group>
+                                <Form.Control
+                                    name="landmark"
+                                    value={
+                                        addressForm.landmark
+                                    }
+                                    onChange={
+                                        handleAddressChange
+                                    }
+                                />
 
                             </div>
 
 
                             <div className="col-md-6">
 
-                                <Form.Group>
+                                <Form.Label>
+                                    Address Type
+                                </Form.Label>
 
-                                    <Form.Label>
-                                        Address Type
-                                    </Form.Label>
+                                <Form.Select
+                                    name="addressType"
+                                    value={
+                                        addressForm.addressType
+                                    }
+                                    onChange={
+                                        handleAddressChange
+                                    }
+                                >
 
-                                    <Form.Select
-                                        name="addressType"
-                                        value={
-                                            form.addressType
-                                        }
-                                        onChange={
-                                            handleChange
-                                        }
-                                    >
+                                    <option value="HOME">
+                                        HOME
+                                    </option>
 
-                                        <option value="HOME">
-                                            HOME
-                                        </option>
+                                    <option value="WORK">
+                                        WORK
+                                    </option>
 
-                                        <option value="WORK">
-                                            WORK
-                                        </option>
+                                    <option value="OTHER">
+                                        OTHER
+                                    </option>
 
-                                        <option value="OTHER">
-                                            OTHER
-                                        </option>
-
-                                    </Form.Select>
-
-                                </Form.Group>
+                                </Form.Select>
 
                             </div>
 
@@ -853,7 +1422,7 @@ const Profile: React.FC = () => {
                                     type="checkbox"
                                     label="Set as default address"
                                     checked={
-                                        form.defaultAddress
+                                        addressForm.defaultAddress
                                     }
                                     onChange={
                                         handleDefaultChange
@@ -866,30 +1435,24 @@ const Profile: React.FC = () => {
 
                     </Modal.Body>
 
-
                     <Modal.Footer>
 
                         <Button
                             variant="secondary"
                             onClick={() =>
-                                setShowModal(false)
+                                setShowAddressModal(false)
                             }
                         >
                             Cancel
                         </Button>
 
                         <Button
-                            variant="primary"
                             type="submit"
-                            disabled={saving}
+                            variant="primary"
                         >
-
-                            {saving
-                                ? "Saving..."
-                                : editingId === null
-                                    ? "Add Address"
-                                    : "Update Address"}
-
+                            {editingAddressId === null
+                                ? "Add Address"
+                                : "Update Address"}
                         </Button>
 
                     </Modal.Footer>

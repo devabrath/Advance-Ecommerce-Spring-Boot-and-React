@@ -10,7 +10,7 @@ import com.cart.ecom_proj.repo.ProductRepo;
 import com.cart.ecom_proj.repo.VendorRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
-
+import com.cart.ecom_proj.dto.AdminProductRequest;
 import java.io.IOException;
 import java.util.List;
 
@@ -246,6 +246,52 @@ public class ProductService {
             );
         }
     }
+
+    public ProductResponse addAdminProduct(
+        AdminProductRequest request,
+        MultipartFile imageFile
+) throws IOException {
+
+    Category category = getCategory(
+            request.getCategoryId()
+    );
+
+    Vendor vendor = vendorRepository
+            .findById(request.getVendorId())
+            .orElseThrow(() ->
+                    new RuntimeException(
+                            "Vendor not found"
+                    )
+            );
+
+    Product product = new Product();
+
+    product.setName(request.getName());
+    product.setDescription(request.getDescription());
+    product.setBrand(request.getBrand());
+    product.setPrice(request.getPrice());
+    product.setCategory(category);
+    product.setVendor(vendor);
+
+    product.setReleaseDate(
+            request.getReleaseDate()
+    );
+
+    product.setProductAvailable(
+            request.isProductAvailable()
+    );
+
+    product.setStockQuantity(
+            request.getStockQuantity()
+    );
+
+    setImage(product, imageFile);
+
+    Product savedProduct =
+            productRepo.save(product);
+
+    return toResponse(savedProduct);
+}
 
     private ProductResponse toResponse(
             Product product

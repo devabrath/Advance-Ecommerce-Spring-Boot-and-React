@@ -392,6 +392,15 @@ const { clearCart } = useAppContext();
                                 </Link>
 
                             )}
+                            {isAuthenticated &&
+    user?.role === "CUSTOMER" && (
+        <Link
+            className="nav-link"
+            to="/profile"
+        >
+            Profile
+        </Link>
+)}
 
 
                             {/* ========================= */}

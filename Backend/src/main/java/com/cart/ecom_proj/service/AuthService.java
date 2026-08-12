@@ -100,11 +100,13 @@ public class AuthService {
         String token = jwtService.generateToken(userDetails);
 
         return new AuthResponse(
-                token,
-                user.getId(),
-                user.getFirstName(),
-                user.getEmail(),
-                user.getRole().name()
-        );
+        token,
+        user.getId(),
+        user.getFirstName(),
+        user.getLastName(),
+        user.getEmail(),
+        user.getPhone(),
+        user.getRole().name()
+);
     }
 }

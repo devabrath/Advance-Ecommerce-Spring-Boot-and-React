@@ -141,6 +141,16 @@ function App() {
                                     </ProtectedRoute>
                                 }
                             />
+                            <Route
+                                path="/profile"
+                                element={
+                                    <ProtectedRoute
+                                        allowedRoles={["CUSTOMER"]}
+                                    >
+                                        <Profile />
+                                    </ProtectedRoute>
+                                }
+                            />
 
                     </Routes>
 
