@@ -12,6 +12,9 @@ import AddProduct from "./components/AddProduct";
 import Product from "./components/Product";
 import UpdateProduct from "./components/UpdateProduct";
 import ProtectedRoute from "./components/ProtectedRoute";
+import MyOrders from "./pages/MyOrders";
+import OrderDetails from "./pages/OrderDetails";
+import Profile from "./pages/Profile";
 
 import {
     BrowserRouter,
@@ -118,6 +121,26 @@ function App() {
                                 <UpdateProduct />
                             }
                         />
+                        <Route
+                            path="/orders"
+                            element={
+                                <ProtectedRoute
+                                    allowedRoles={["CUSTOMER"]}
+                                >
+                                    <MyOrders />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                                path="/orders/:id"
+                                element={
+                                    <ProtectedRoute
+                                        allowedRoles={["CUSTOMER"]}
+                                    >
+                                        <OrderDetails />
+                                    </ProtectedRoute>
+                                }
+                            />
 
                     </Routes>
 
