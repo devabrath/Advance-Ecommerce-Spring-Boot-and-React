@@ -91,16 +91,34 @@ const CheckoutPopup: React.FC<CheckoutPopupProps> = ({
                     );
                 }
 
-            } catch (err) {
+            } 
+            // catch (err) {
 
-                console.error(
-                    "Error fetching addresses:",
-                    err
-                );
+            //     console.error(
+            //         "Error fetching addresses:",
+            //         err
+            //     );
 
-                setError(
-                    "Unable to load your addresses."
-                );
+            //     setError(
+            //         "Unable to load your addresses."
+            //     );
+            catch (err: any) {
+
+    console.error("========== ADDRESS ERROR ==========");
+    console.error("FULL ERROR:", err);
+    console.error("STATUS:", err?.response?.status);
+    console.error("RESPONSE DATA:", err?.response?.data);
+    console.error("REQUEST URL:", err?.config?.url);
+    console.error("REQUEST HEADERS:", err?.config?.headers);
+    console.error("TOKEN:", localStorage.getItem("token"));
+    console.error("===================================");
+
+    setError(
+        `Address request failed: ${
+            err?.response?.status ?? err?.message
+        }`
+    );
+            
 
             } finally {
 
