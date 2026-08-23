@@ -36,6 +36,10 @@ public class Order {
     @Column(nullable = false)
     private PaymentStatus paymentStatus = PaymentStatus.PENDING;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PaymentMethod paymentMethod;
+
     /*
      * We store a snapshot of the shipping address.
      * If the customer changes their address later,

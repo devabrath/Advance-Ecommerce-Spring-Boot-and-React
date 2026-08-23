@@ -2,11 +2,10 @@ package com.cart.ecom_proj.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
-public class VendorRequest {
+public class AdminCustomerRequest {
 
     @NotBlank(message = "First name is required")
     private String firstName;
@@ -14,20 +13,11 @@ public class VendorRequest {
     @NotBlank(message = "Last name is required")
     private String lastName;
 
-    @Email(message = "Invalid email")
     @NotBlank(message = "Email is required")
+    @Email(message = "Invalid email")
     private String email;
-
-    /*
-     * Required only while creating a vendor.
-     * During update it can be empty.
-     */
-    private String password;
 
     private String phone;
 
-    @NotBlank(message = "Shop name is required")
-    private String shopName;
-
-    private String description;
+    private String password;
 }

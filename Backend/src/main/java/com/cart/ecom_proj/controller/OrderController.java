@@ -8,6 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import com.cart.ecom_proj.dto.CreatePaymentOrderRequest;
+import com.cart.ecom_proj.dto.RazorpayOrderResponse;
+import com.cart.ecom_proj.dto.VerifyPaymentRequest;
+import com.razorpay.RazorpayException;
 
 @RestController
 @RequestMapping("/api/customer/orders")
@@ -70,4 +74,34 @@ public ResponseEntity<OrderResponse> cancelOrder(
             )
     );
 }
+
+@PostMapping("/payment/create-order")
+public ResponseEntity<RazorpayOrderResponse> createPaymentOrder(
+        Authentication authentication,
+        @Valid @RequestBody CreatePaymentOrderRequest request
+) throws RazorpayException {
+
+    return ResponseEntity.ok(
+            orderService.createPaymentOrder(
+                    authentication.getName(),
+                    request
+            )
+    );
+}
+
+
+@PostMapping("/payment/verify")
+public ResponseEntity<OrderResponse> verifyPayment(
+        Authentication authentication,
+        @Valid @RequestBody VerifyPaymentRequest request
+) throws RazorpayException {
+
+    return ResponseEntity.ok(
+            orderService.verifyPaymentAndCreateOrder(
+                    authentication.getName(),
+                    request
+            )
+    );
+}
+
 }

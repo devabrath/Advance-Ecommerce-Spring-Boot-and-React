@@ -13,6 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 import com.cart.ecom_proj.dto.AdminProductRequest;
 import java.io.IOException;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 public class ProductService {
@@ -42,6 +44,14 @@ public class ProductService {
                 .map(this::toResponse)
                 .toList();
     }
+    public Page<ProductResponse> getProducts(
+        Pageable pageable
+) {
+
+    return productRepo
+            .findAll(pageable)
+            .map(this::toResponse);
+}
 
     public ProductResponse getProductById(Long id) {
 
@@ -293,6 +303,130 @@ public class ProductService {
     return toResponse(savedProduct);
 }
 
+public ProductResponse updateAdminProduct(
+        Long productId,
+        AdminProductRequest request,
+        MultipartFile imageFile
+) throws IOException {
+
+    Product product =
+            productRepo.findById(productId)
+                    .orElseThrow(() ->
+                            new RuntimeException(
+                                    "Product not found"
+                            )
+                    );
+
+
+    Category category =
+            getCategory(
+                    request.getCategoryId()
+            );
+
+
+    Vendor vendor =
+            vendorRepository
+                    .findById(
+                            request.getVendorId()
+                    )
+                    .orElseThrow(() ->
+                            new RuntimeException(
+                                    "Vendor not found"
+                            )
+                    );
+
+
+    product.setName(
+            request.getName()
+    );
+
+    product.setDescription(
+            request.getDescription()
+    );
+
+    product.setBrand(
+            request.getBrand()
+    );
+
+    product.setPrice(
+            request.getPrice()
+    );
+
+    product.setCategory(
+            category
+    );
+
+    product.setVendor(
+            vendor
+    );
+
+    product.setReleaseDate(
+            request.getReleaseDate()
+    );
+
+    product.setProductAvailable(
+            request.isProductAvailable()
+    );
+
+    product.setStockQuantity(
+            request.getStockQuantity()
+    );
+
+
+    /*
+     * Only replace image when
+     * Admin actually uploads one.
+     */
+
+    if (imageFile != null
+            && !imageFile.isEmpty()) {
+
+        setImage(
+                product,
+                imageFile
+        );
+    }
+
+
+    return toResponse(
+            productRepo.save(product)
+    );
+}
+
+public void deleteAdminProduct(
+        Long productId
+) {
+
+    Product product =
+            productRepo.findById(productId)
+                    .orElseThrow(() ->
+                            new RuntimeException(
+                                    "Product not found"
+                            )
+                    );
+
+    productRepo.delete(product);
+}
+public Page<ProductResponse> getAdminProducts(
+        String keyword,
+        String status,
+        Pageable pageable
+) {
+
+    return productRepo
+            .findAdminProducts(
+                    keyword == null
+                            ? ""
+                            : keyword.trim(),
+
+                    status == null
+                            ? "ALL"
+                            : status,
+
+                    pageable
+            )
+            .map(this::toResponse);
+}
     private ProductResponse toResponse(
             Product product
     ) {
@@ -341,3 +475,4 @@ public class ProductService {
         );
     }
 }
+

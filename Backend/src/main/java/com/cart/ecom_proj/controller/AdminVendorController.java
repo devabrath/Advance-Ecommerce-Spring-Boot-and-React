@@ -23,31 +23,122 @@ public class AdminVendorController {
         this.vendorService = vendorService;
     }
 
+
+    // =====================================================
+    // CREATE
+    // =====================================================
+
     @PostMapping
-    public ResponseEntity<VendorResponse> createVendor(
-            @Valid @RequestBody VendorRequest request
+    public ResponseEntity<?> createVendor(
+            @Valid
+            @RequestBody
+            VendorRequest request
     ) {
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(vendorService.createVendor(request));
+        try {
+
+            return ResponseEntity
+                    .status(HttpStatus.CREATED)
+                    .body(
+                            vendorService
+                                    .createVendor(request)
+                    );
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(e.getMessage());
+        }
     }
 
+
+    // =====================================================
+    // GET ALL
+    // =====================================================
+
     @GetMapping
-    public ResponseEntity<List<VendorResponse>> getVendors() {
+    public ResponseEntity<List<VendorResponse>>
+    getVendors() {
 
         return ResponseEntity.ok(
                 vendorService.getAllVendors()
         );
     }
 
+
+    // =====================================================
+    // GET ONE
+    // =====================================================
+
     @GetMapping("/{id}")
-    public ResponseEntity<VendorResponse> getVendor(
+    public ResponseEntity<VendorResponse>
+    getVendor(
             @PathVariable Long id
     ) {
 
         return ResponseEntity.ok(
                 vendorService.getVendorById(id)
         );
+    }
+
+
+    // =====================================================
+    // UPDATE
+    // =====================================================
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateVendor(
+            @PathVariable Long id,
+
+            @Valid
+            @RequestBody
+            VendorRequest request
+    ) {
+
+        try {
+
+            return ResponseEntity.ok(
+                    vendorService.updateVendor(
+                            id,
+                            request
+                    )
+            );
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(e.getMessage());
+        }
+    }
+
+
+    // =====================================================
+    // STATUS
+    // =====================================================
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<?> updateStatus(
+            @PathVariable Long id,
+
+            @RequestParam boolean active
+    ) {
+
+        try {
+
+            return ResponseEntity.ok(
+                    vendorService.updateStatus(
+                            id,
+                            active
+                    )
+            );
+
+        } catch (RuntimeException e) {
+
+            return ResponseEntity
+                    .badRequest()
+                    .body(e.getMessage());
+        }
     }
 }

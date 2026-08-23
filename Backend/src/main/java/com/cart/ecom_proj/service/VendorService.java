@@ -29,68 +29,135 @@ public class VendorService {
         this.passwordEncoder = passwordEncoder;
     }
 
+
+    // =====================================================
+    // CREATE
+    // =====================================================
+
     public VendorResponse createVendor(
             VendorRequest request
     ) {
 
-        if (userRepository.existsByEmail(request.getEmail())) {
+        if (userRepository.existsByEmail(
+                request.getEmail()
+        )) {
+
             throw new RuntimeException(
                     "Email is already registered"
             );
         }
 
+
         if (request.getPhone() != null
                 && !request.getPhone().isBlank()
-                && userRepository.existsByPhone(request.getPhone())) {
+                && userRepository.existsByPhone(
+                        request.getPhone()
+                )) {
 
             throw new RuntimeException(
                     "Phone number is already registered"
             );
         }
 
+
+        if (request.getPassword() == null
+                || request.getPassword().isBlank()) {
+
+            throw new RuntimeException(
+                    "Password is required"
+            );
+        }
+
+
         User user = new User();
 
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setEmail(request.getEmail());
-        user.setPhone(request.getPhone());
+        user.setFirstName(
+                request.getFirstName()
+        );
+
+        user.setLastName(
+                request.getLastName()
+        );
+
+        user.setEmail(
+                request.getEmail()
+        );
+
+        user.setPhone(
+                request.getPhone()
+        );
 
         user.setPassword(
-                passwordEncoder.encode(request.getPassword())
+                passwordEncoder.encode(
+                        request.getPassword()
+                )
         );
 
         user.setRole(Role.VENDOR);
+
         user.setEnabled(true);
 
-        User savedUser = userRepository.save(user);
+
+        User savedUser =
+                userRepository.save(user);
+
 
         Vendor vendor = new Vendor();
 
         vendor.setUser(savedUser);
-        vendor.setShopName(request.getShopName());
-        vendor.setDescription(request.getDescription());
-        vendor.setPhone(request.getPhone());
-        vendor.setEmail(request.getEmail());
+
+        vendor.setShopName(
+                request.getShopName()
+        );
+
+        vendor.setDescription(
+                request.getDescription()
+        );
+
+        vendor.setPhone(
+                request.getPhone()
+        );
+
+        vendor.setEmail(
+                request.getEmail()
+        );
+
         vendor.setActive(true);
+
 
         Vendor savedVendor =
                 vendorRepository.save(vendor);
 
+
         return toResponse(savedVendor);
     }
 
-    public List<VendorResponse> getAllVendors() {
 
-        return vendorRepository.findAll()
+    // =====================================================
+    // GET ALL
+    // =====================================================
+
+    public List<VendorResponse>
+    getAllVendors() {
+
+        return vendorRepository
+                .findAll()
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
-    public VendorResponse getVendorById(Long id) {
+
+    // =====================================================
+    // GET ONE
+    // =====================================================
+
+    public VendorResponse
+    getVendorById(Long id) {
 
         Vendor vendor =
-                vendorRepository.findById(id)
+                vendorRepository
+                        .findById(id)
                         .orElseThrow(() ->
                                 new RuntimeException(
                                         "Vendor not found"
@@ -100,6 +167,160 @@ public class VendorService {
         return toResponse(vendor);
     }
 
+
+    // =====================================================
+    // UPDATE
+    // =====================================================
+
+    public VendorResponse updateVendor(
+            Long id,
+            VendorRequest request
+    ) {
+
+        Vendor vendor =
+                vendorRepository
+                        .findById(id)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Vendor not found"
+                                )
+                        );
+
+
+        User user = vendor.getUser();
+
+
+        // EMAIL CHANGE
+
+        if (!user.getEmail()
+                .equalsIgnoreCase(
+                        request.getEmail()
+                )
+                &&
+                userRepository.existsByEmail(
+                        request.getEmail()
+                )) {
+
+            throw new RuntimeException(
+                    "Email is already registered"
+            );
+        }
+
+
+        // PHONE CHANGE
+
+        if (request.getPhone() != null
+                && !request.getPhone().isBlank()
+                && !request.getPhone()
+                    .equals(user.getPhone())) {
+
+            if (userRepository.existsByPhone(
+                    request.getPhone()
+            )) {
+
+                throw new RuntimeException(
+                        "Phone number is already registered"
+                );
+            }
+        }
+
+
+        user.setFirstName(
+                request.getFirstName()
+        );
+
+        user.setLastName(
+                request.getLastName()
+        );
+
+        user.setEmail(
+                request.getEmail()
+        );
+
+        user.setPhone(
+                request.getPhone()
+        );
+
+
+        // Password is optional during edit
+
+        if (request.getPassword() != null
+                && !request.getPassword().isBlank()) {
+
+            user.setPassword(
+                    passwordEncoder.encode(
+                            request.getPassword()
+                    )
+            );
+        }
+
+
+        vendor.setShopName(
+                request.getShopName()
+        );
+
+        vendor.setDescription(
+                request.getDescription()
+        );
+
+        vendor.setPhone(
+                request.getPhone()
+        );
+
+        vendor.setEmail(
+                request.getEmail()
+        );
+
+
+        userRepository.save(user);
+
+        Vendor savedVendor =
+                vendorRepository.save(vendor);
+
+
+        return toResponse(savedVendor);
+    }
+
+
+    // =====================================================
+    // ENABLE / DISABLE
+    // =====================================================
+
+    public VendorResponse updateStatus(
+            Long id,
+            boolean active
+    ) {
+
+        Vendor vendor =
+                vendorRepository
+                        .findById(id)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Vendor not found"
+                                )
+                        );
+
+
+        vendor.setActive(active);
+
+        // Keep login status in sync
+        vendor.getUser().setEnabled(active);
+
+        userRepository.save(
+                vendor.getUser()
+        );
+
+
+        return toResponse(
+                vendorRepository.save(vendor)
+        );
+    }
+
+
+    // =====================================================
+    // RESPONSE
+    // =====================================================
+
     private VendorResponse toResponse(
             Vendor vendor
     ) {
@@ -107,14 +328,23 @@ public class VendorService {
         User user = vendor.getUser();
 
         return new VendorResponse(
+
                 vendor.getId(),
+
                 user.getId(),
+
                 user.getFirstName(),
+
                 user.getLastName(),
+
                 user.getEmail(),
+
                 user.getPhone(),
+
                 vendor.getShopName(),
+
                 vendor.getDescription(),
+
                 vendor.isActive()
         );
     }
