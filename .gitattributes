@@ -1,1 +1,2 @@
-Frontend/** linguist-detectable=false
+Frontend/** linguist-detectable=true
+Backend/**/*.java linguist-detectable=true
