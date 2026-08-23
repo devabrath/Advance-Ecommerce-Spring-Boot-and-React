@@ -1,33 +1,65 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+    useEffect,
+    useMemo,
+    useState
+} from "react";
+
 import API from "../axios";
 
+
 interface OrderItem {
+
     productId?: number;
+
     productName?: string;
+
     quantity?: number;
+
     price?: number;
+
     totalPrice?: number;
 }
 
+
 interface Order {
+
     orderId: number;
+
     totalAmount: number;
+
     orderStatus: string;
+
     paymentStatus: string;
 
     shippingFullName: string;
+
     shippingPhone: string;
+
     shippingAddressLine: string;
+
     shippingCity: string;
+
     shippingState: string;
+
     shippingPostalCode: string;
+
     shippingLandmark?: string;
 
     items: OrderItem[];
+
     createdAt: string;
 }
 
+
+const ITEMS_PER_PAGE = 20;
+
+
 const AdminOrders = () => {
+
+
+    // =====================================================
+    // STATE
+    // =====================================================
 
     const [orders, setOrders] =
         useState<Order[]>([]);
@@ -43,6 +75,9 @@ const AdminOrders = () => {
 
     const [statusFilter, setStatusFilter] =
         useState("ALL");
+
+    const [currentPage, setCurrentPage] =
+        useState(1);
 
     const [selectedOrder, setSelectedOrder] =
         useState<Order | null>(null);
@@ -64,14 +99,19 @@ const AdminOrders = () => {
 
             setLoading(true);
 
+            setError("");
+
+
             const response =
                 await API.get<Order[]>(
                     "/admin/orders"
                 );
 
-            setOrders(response.data);
 
-            setError("");
+            setOrders(
+                response.data
+            );
+
 
         } catch (err: any) {
 
@@ -80,10 +120,12 @@ const AdminOrders = () => {
                 err
             );
 
+
             setError(
                 err?.response?.data ||
                 "Unable to load orders."
             );
+
 
         } finally {
 
@@ -100,63 +142,160 @@ const AdminOrders = () => {
 
 
     // =====================================================
-    // FILTER
+    // FILTER ORDERS
     // =====================================================
 
-    const filteredOrders = useMemo(() => {
-
-        return orders.filter(order => {
+    const filteredOrders =
+        useMemo(() => {
 
             const searchValue =
-                search.trim().toLowerCase();
+                search
+                    .trim()
+                    .toLowerCase();
 
 
-            const matchesSearch =
-                String(order.orderId)
-                    .toLowerCase()
-                    .includes(searchValue)
-                ||
-                order.shippingFullName
-                    ?.toLowerCase()
-                    .includes(searchValue)
-                ||
-                order.shippingPhone
-                    ?.toLowerCase()
-                    .includes(searchValue);
+            return orders.filter(
+                order => {
+
+                    const matchesSearch =
+
+                        String(
+                            order.orderId
+                        )
+                            .toLowerCase()
+                            .includes(
+                                searchValue
+                            )
+
+                        ||
+
+                        order.shippingFullName
+                            ?.toLowerCase()
+                            .includes(
+                                searchValue
+                            )
+
+                        ||
+
+                        order.shippingPhone
+                            ?.toLowerCase()
+                            .includes(
+                                searchValue
+                            );
 
 
-            const matchesStatus =
-                statusFilter === "ALL"
-                ||
-                order.orderStatus ===
-                    statusFilter;
+                    const matchesStatus =
+
+                        statusFilter === "ALL"
+
+                        ||
+
+                        order.orderStatus ===
+                        statusFilter;
 
 
-            return (
-                matchesSearch &&
-                matchesStatus
+                    return (
+
+                        matchesSearch
+
+                        &&
+
+                        matchesStatus
+
+                    );
+                }
             );
-        });
+
+        }, [
+
+            orders,
+
+            search,
+
+            statusFilter
+
+        ]);
+
+
+    // =====================================================
+    // RESET PAGE WHEN FILTER CHANGES
+    // =====================================================
+
+    useEffect(() => {
+
+        setCurrentPage(1);
 
     }, [
-        orders,
+
         search,
+
         statusFilter
+
     ]);
+
+
+    // =====================================================
+    // PAGINATION
+    // =====================================================
+
+    const totalPages =
+        Math.ceil(
+            filteredOrders.length /
+            ITEMS_PER_PAGE
+        );
+
+
+    const startIndex =
+        (currentPage - 1) *
+        ITEMS_PER_PAGE;
+
+
+    const endIndex =
+        startIndex +
+        ITEMS_PER_PAGE;
+
+
+    const paginatedOrders =
+        filteredOrders.slice(
+            startIndex,
+            endIndex
+        );
+
+
+    const goToPage = (
+        page: number
+    ) => {
+
+        if (
+            page < 1 ||
+            page > totalPages
+        ) {
+
+            return;
+        }
+
+
+        setCurrentPage(page);
+    };
 
 
     // =====================================================
     // STATUS LIST
     // =====================================================
 
-    const statuses = Array.from(
-        new Set(
-            orders.map(
-                order =>
-                    order.orderStatus
+    const statuses =
+        Array.from(
+
+            new Set(
+
+                orders.map(
+                    order =>
+                        order.orderStatus
+                )
+
             )
-        )
-    );
+
+        );
 
 
     // =====================================================
@@ -174,11 +313,14 @@ const AdminOrders = () => {
                     `/admin/orders/${orderId}`
                 );
 
+
             setSelectedOrder(
                 response.data
             );
 
+
             setShowDetails(true);
+
 
         } catch (err: any) {
 
@@ -186,6 +328,7 @@ const AdminOrders = () => {
                 "Order details error:",
                 err
             );
+
 
             alert(
                 err?.response?.data ||
@@ -196,7 +339,7 @@ const AdminOrders = () => {
 
 
     // =====================================================
-    // UPDATE STATUS
+    // UPDATE ORDER STATUS
     // =====================================================
 
     const updateStatus = async (
@@ -204,6 +347,7 @@ const AdminOrders = () => {
     ) => {
 
         if (!selectedOrder) {
+
             return;
         }
 
@@ -217,7 +361,7 @@ const AdminOrders = () => {
                 await API.put<Order>(
                     `/admin/orders/${selectedOrder.orderId}/status`,
                     {
-                        status: status
+                        status
                     }
                 );
 
@@ -227,13 +371,18 @@ const AdminOrders = () => {
             );
 
 
-            setOrders(previous =>
-                previous.map(order =>
-                    order.orderId ===
-                    selectedOrder.orderId
-                        ? response.data
-                        : order
-                )
+            setOrders(
+                previous =>
+                    previous.map(
+                        order =>
+
+                            order.orderId ===
+                            selectedOrder.orderId
+
+                                ? response.data
+
+                                : order
+                    )
             );
 
 
@@ -244,10 +393,12 @@ const AdminOrders = () => {
                 err
             );
 
+
             alert(
                 err?.response?.data ||
                 "Unable to update order status."
             );
+
 
         } finally {
 
@@ -269,14 +420,31 @@ const AdminOrders = () => {
         ) {
 
             case "CANCELLED":
+
                 return "disabled";
 
+
             case "DELIVERED":
+
                 return "active";
 
+
             default:
+
                 return "active";
         }
+    };
+
+
+    // =====================================================
+    // CLOSE DETAILS
+    // =====================================================
+
+    const closeDetails = () => {
+
+        setShowDetails(false);
+
+        setSelectedOrder(null);
     };
 
 
@@ -287,10 +455,13 @@ const AdminOrders = () => {
     if (loading) {
 
         return (
+
             <div className="admin-customers-page">
 
                 <div className="customer-loading">
+
                     Loading orders...
+
                 </div>
 
             </div>
@@ -306,7 +477,10 @@ const AdminOrders = () => {
 
         <div className="admin-customers-page">
 
+
+            {/* ================================================= */}
             {/* HEADER */}
+            {/* ================================================= */}
 
             <div className="customers-header">
 
@@ -326,20 +500,29 @@ const AdminOrders = () => {
             </div>
 
 
+            {/* ================================================= */}
             {/* ERROR */}
+            {/* ================================================= */}
 
             {error && (
 
                 <div className="customer-error">
+
                     {error}
+
                 </div>
 
             )}
 
 
+            {/* ================================================= */}
             {/* TOOLBAR */}
+            {/* ================================================= */}
 
             <div className="customer-toolbar">
+
+
+                {/* SEARCH */}
 
                 <input
                     type="text"
@@ -353,6 +536,8 @@ const AdminOrders = () => {
                 />
 
 
+                {/* STATUS FILTER */}
+
                 <select
                     value={statusFilter}
                     onChange={e =>
@@ -360,45 +545,63 @@ const AdminOrders = () => {
                             e.target.value
                         )
                     }
-                    style={{
-                        padding: "10px 13px",
-                        border:
-                            "1px solid #d1d5db",
-                        borderRadius: "8px",
-                        outline: "none",
-                        background: "white",
-                        cursor: "pointer"
-                    }}
+                    className="admin-filter-select"
                 >
 
                     <option value="ALL">
+
                         All Status
+
                     </option>
 
-                    {statuses.map(status => (
 
-                        <option
-                            key={status}
-                            value={status}
-                        >
-                            {status}
-                        </option>
+                    {statuses.map(
+                        status => (
 
-                    ))}
+                            <option
+                                key={status}
+                                value={status}
+                            >
+
+                                {status}
+
+                            </option>
+
+                        )
+                    )}
 
                 </select>
 
 
+                {/* COUNT */}
+
                 <span>
-                    {filteredOrders.length}
-                    {" "}
-                    orders
+
+                    {filteredOrders.length === 0
+
+                        ? "Showing 0 orders"
+
+                        : `Showing ${
+                            startIndex + 1
+                        } - ${
+                            Math.min(
+                                endIndex,
+                                filteredOrders.length
+                            )
+                        } of ${
+                            filteredOrders.length
+                        } orders`
+
+                    }
+
                 </span>
 
             </div>
 
 
+            {/* ================================================= */}
             {/* TABLE */}
+            {/* ================================================= */}
 
             <div className="customer-table-container">
 
@@ -443,7 +646,10 @@ const AdminOrders = () => {
 
                     <tbody>
 
-                        {filteredOrders.length === 0 ? (
+
+                        {/* EMPTY */}
+
+                        {paginatedOrders.length === 0 ? (
 
                             <tr>
 
@@ -451,14 +657,16 @@ const AdminOrders = () => {
                                     colSpan={7}
                                     className="empty-customers"
                                 >
+
                                     No orders found.
+
                                 </td>
 
                             </tr>
 
                         ) : (
 
-                            filteredOrders.map(
+                            paginatedOrders.map(
                                 order => (
 
                                     <tr
@@ -467,15 +675,18 @@ const AdminOrders = () => {
                                         }
                                     >
 
+
                                         {/* ORDER ID */}
 
                                         <td>
 
                                             <strong>
+
                                                 #
                                                 {
                                                     order.orderId
                                                 }
+
                                             </strong>
 
                                         </td>
@@ -486,9 +697,11 @@ const AdminOrders = () => {
                                         <td>
 
                                             <strong>
+
                                                 {
                                                     order.shippingFullName
                                                 }
+
                                             </strong>
 
                                         </td>
@@ -499,12 +712,14 @@ const AdminOrders = () => {
                                         <td>
 
                                             <strong>
+
                                                 ₹
                                                 {Number(
                                                     order.totalAmount
                                                 ).toLocaleString(
                                                     "en-IN"
                                                 )}
+
                                             </strong>
 
                                         </td>
@@ -518,15 +733,17 @@ const AdminOrders = () => {
                                                 className={
                                                     `customer-status ${
                                                         order.paymentStatus ===
-                                                        "PAID"
+                                                        "SUCCESS"
                                                             ? "active"
                                                             : "disabled"
                                                     }`
                                                 }
                                             >
+
                                                 {
                                                     order.paymentStatus
                                                 }
+
                                             </span>
 
                                         </td>
@@ -543,9 +760,11 @@ const AdminOrders = () => {
                                                     )}`
                                                 }
                                             >
+
                                                 {
                                                     order.orderStatus
                                                 }
+
                                             </span>
 
                                         </td>
@@ -555,32 +774,41 @@ const AdminOrders = () => {
 
                                         <td>
 
-                                            {order.createdAt
-                                                ? new Date(
-                                                    order.createdAt
-                                                ).toLocaleDateString(
-                                                    "en-IN"
-                                                )
-                                                : "-"
+                                            {
+                                                order.createdAt
+
+                                                    ? new Date(
+                                                        order.createdAt
+                                                    ).toLocaleDateString(
+                                                        "en-IN"
+                                                    )
+
+                                                    : "-"
                                             }
 
                                         </td>
 
 
-                                        {/* ACTIONS */}
+                                        {/* ACTION */}
 
                                         <td>
 
-                                            <button
-                                                className="customer-action-button"
-                                                onClick={() =>
-                                                    handleViewOrder(
-                                                        order.orderId
-                                                    )
-                                                }
-                                            >
-                                                View
-                                            </button>
+                                            <div className="customer-actions">
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handleViewOrder(
+                                                            order.orderId
+                                                        )
+                                                    }
+                                                >
+
+                                                    View
+
+                                                </button>
+
+                                            </div>
 
                                         </td>
 
@@ -599,393 +827,504 @@ const AdminOrders = () => {
 
 
             {/* ================================================= */}
+            {/* PAGINATION */}
+            {/* ================================================= */}
+
+            {totalPages > 1 && (
+
+                <div className="customer-pagination">
+
+
+                    {/* PREVIOUS */}
+
+                    <button
+                        type="button"
+                        className="admin-pagination-button"
+                        disabled={
+                            currentPage === 1
+                        }
+                        onClick={() =>
+                            goToPage(
+                                currentPage - 1
+                            )
+                        }
+                    >
+
+                        ← Previous
+
+                    </button>
+
+
+                    {/* PAGE NUMBERS */}
+
+                    {Array.from(
+                        {
+                            length:
+                                totalPages
+                        },
+                        (
+                            _,
+                            index
+                        ) =>
+                            index + 1
+                    ).map(
+                        page => (
+
+                            <button
+                                key={page}
+                                type="button"
+                                onClick={() =>
+                                    goToPage(page)
+                                }
+                                className={
+                                    `admin-pagination-button ${
+                                        currentPage ===
+                                        page
+                                            ? "active"
+                                            : ""
+                                    }`
+                                }
+                            >
+
+                                {page}
+
+                            </button>
+
+                        )
+                    )}
+
+
+                    {/* NEXT */}
+
+                    <button
+                        type="button"
+                        className="admin-pagination-button"
+                        disabled={
+                            currentPage ===
+                            totalPages
+                        }
+                        onClick={() =>
+                            goToPage(
+                                currentPage + 1
+                            )
+                        }
+                    >
+
+                        Next →
+
+                    </button>
+
+                </div>
+
+            )}
+
+
+            {/* ================================================= */}
             {/* ORDER DETAILS MODAL */}
             {/* ================================================= */}
 
             {showDetails &&
                 selectedOrder && (
 
-                <div
-                    className="customer-modal-overlay"
-                    onClick={() =>
-                        setShowDetails(false)
-                    }
-                >
-
                     <div
-                        className="customer-modal"
-                        onClick={e =>
-                            e.stopPropagation()
+                        className="customer-modal-overlay"
+                        onClick={
+                            closeDetails
                         }
                     >
 
-                        {/* HEADER */}
-
                         <div
-                            className="customer-modal-header"
+                            className="customer-modal"
+                            onClick={e =>
+                                e.stopPropagation()
+                            }
                         >
 
-                            <div>
 
-                                <h2>
-                                    Order #
-                                    {
-                                        selectedOrder.orderId
-                                    }
-                                </h2>
+                            {/* ================================= */}
+                            {/* MODAL HEADER */}
+                            {/* ================================= */}
 
-                                <small
-                                    style={{
-                                        color:
-                                            "#6b7280"
-                                    }}
-                                >
-                                    {selectedOrder.createdAt
-                                        ? new Date(
+                            <div className="customer-modal-header">
+
+                                <div>
+
+                                    <h2>
+
+                                        Order #
+
+                                        {
+                                            selectedOrder.orderId
+                                        }
+
+                                    </h2>
+
+
+                                    <small className="admin-muted-text">
+
+                                        {
                                             selectedOrder.createdAt
+
+                                                ? new Date(
+                                                    selectedOrder.createdAt
+                                                ).toLocaleString(
+                                                    "en-IN"
+                                                )
+
+                                                : "-"
+                                        }
+
+                                    </small>
+
+                                </div>
+
+
+                                <button
+                                    type="button"
+                                    onClick={
+                                        closeDetails
+                                    }
+                                >
+
+                                    ×
+
+                                </button>
+
+                            </div>
+
+
+                            {/* ================================= */}
+                            {/* CUSTOMER DETAILS */}
+                            {/* ================================= */}
+
+                            <div className="customer-detail-list">
+
+
+                                {/* CUSTOMER */}
+
+                                <div>
+
+                                    <span>
+                                        Customer
+                                    </span>
+
+                                    <strong>
+
+                                        {
+                                            selectedOrder.shippingFullName
+                                        }
+
+                                    </strong>
+
+                                </div>
+
+
+                                {/* PHONE */}
+
+                                <div>
+
+                                    <span>
+                                        Phone
+                                    </span>
+
+                                    <strong>
+
+                                        {
+                                            selectedOrder.shippingPhone
+                                        }
+
+                                    </strong>
+
+                                </div>
+
+
+                                {/* PAYMENT */}
+
+                                <div>
+
+                                    <span>
+                                        Payment
+                                    </span>
+
+                                    <strong>
+
+                                        {
+                                            selectedOrder.paymentStatus
+                                        }
+
+                                    </strong>
+
+                                </div>
+
+
+                                {/* ORDER STATUS */}
+
+                                <div>
+
+                                    <span>
+                                        Order Status
+                                    </span>
+
+                                    <strong>
+
+                                        {
+                                            selectedOrder.orderStatus
+                                        }
+
+                                    </strong>
+
+                                </div>
+
+
+                                {/* TOTAL */}
+
+                                <div>
+
+                                    <span>
+                                        Total Amount
+                                    </span>
+
+                                    <strong>
+
+                                        ₹
+                                        {Number(
+                                            selectedOrder.totalAmount
                                         ).toLocaleString(
                                             "en-IN"
-                                        )
-                                        : "-"
-                                    }
-                                </small>
+                                        )}
+
+                                    </strong>
+
+                                </div>
+
+
+                                {/* ADDRESS */}
+
+                                <div>
+
+                                    <span>
+                                        Address
+                                    </span>
+
+                                    <strong className="admin-order-address">
+
+                                        {
+                                            selectedOrder
+                                                .shippingAddressLine
+                                        }
+
+                                        <br />
+
+                                        {
+                                            selectedOrder
+                                                .shippingCity
+                                        }
+
+                                        {", "}
+
+                                        {
+                                            selectedOrder
+                                                .shippingState
+                                        }
+
+                                        {" - "}
+
+                                        {
+                                            selectedOrder
+                                                .shippingPostalCode
+                                        }
+
+                                        {
+                                            selectedOrder
+                                                .shippingLandmark
+
+                                                ? ` (${selectedOrder.shippingLandmark})`
+
+                                                : ""
+                                        }
+
+                                    </strong>
+
+                                </div>
 
                             </div>
 
 
-                            <button
-                                onClick={() =>
-                                    setShowDetails(
-                                        false
-                                    )
-                                }
-                            >
-                                ×
-                            </button>
+                            {/* ================================= */}
+                            {/* ORDER ITEMS */}
+                            {/* ================================= */}
 
-                        </div>
+                            <div className="admin-order-items">
 
+                                <h3>
 
-                        {/* CUSTOMER */}
+                                    Order Items
 
-                        <div
-                            className="customer-detail-list"
-                        >
-
-                            <div>
-
-                                <span>
-                                    Customer
-                                </span>
-
-                                <strong>
-                                    {
-                                        selectedOrder.shippingFullName
-                                    }
-                                </strong>
-
-                            </div>
+                                </h3>
 
 
-                            <div>
+                                {selectedOrder.items?.length === 0 && (
 
-                                <span>
-                                    Phone
-                                </span>
+                                    <div className="admin-muted-text">
 
-                                <strong>
-                                    {
-                                        selectedOrder.shippingPhone
-                                    }
-                                </strong>
+                                        No items found.
 
-                            </div>
+                                    </div>
+
+                                )}
 
 
-                            <div>
-
-                                <span>
-                                    Payment
-                                </span>
-
-                                <strong>
-                                    {
-                                        selectedOrder.paymentStatus
-                                    }
-                                </strong>
-
-                            </div>
-
-
-                            <div>
-
-                                <span>
-                                    Order Status
-                                </span>
-
-                                <strong>
-                                    {
-                                        selectedOrder.orderStatus
-                                    }
-                                </strong>
-
-                            </div>
-
-
-                            <div>
-
-                                <span>
-                                    Total Amount
-                                </span>
-
-                                <strong>
-                                    ₹
-                                    {Number(
-                                        selectedOrder.totalAmount
-                                    ).toLocaleString(
-                                        "en-IN"
-                                    )}
-                                </strong>
-
-                            </div>
-
-
-                            <div>
-
-                                <span>
-                                    Address
-                                </span>
-
-                                <strong
-                                    style={{
-                                        maxWidth:
-                                            "60%"
-                                    }}
-                                >
-
-                                    {
-                                        selectedOrder
-                                            .shippingAddressLine
-                                    }
-
-                                    <br />
-
-                                    {
-                                        selectedOrder
-                                            .shippingCity
-                                    }
-
-                                    {", "}
-
-                                    {
-                                        selectedOrder
-                                            .shippingState
-                                    }
-
-                                    {" - "}
-
-                                    {
-                                        selectedOrder
-                                            .shippingPostalCode
-                                    }
-
-                                    {selectedOrder
-                                        .shippingLandmark
-                                        ? ` (${selectedOrder.shippingLandmark})`
-                                        : ""
-                                    }
-
-                                </strong>
-
-                            </div>
-
-                        </div>
-
-
-                        {/* ITEMS */}
-
-                        <div
-                            style={{
-                                marginTop:
-                                    "25px"
-                            }}
-                        >
-
-                            <h3
-                                style={{
-                                    fontSize:
-                                        "16px",
-                                    marginBottom:
-                                        "12px"
-                                }}
-                            >
-                                Order Items
-                            </h3>
-
-
-                            {selectedOrder.items
-                                ?.map(
+                                {selectedOrder.items?.map(
                                     (
                                         item,
                                         index
                                     ) => (
 
-                                    <div
-                                        key={index}
-                                        style={{
-                                            padding:
-                                                "12px 0",
-                                            borderBottom:
-                                                "1px solid #f1f5f9",
-                                            display:
-                                                "flex",
-                                            justifyContent:
-                                                "space-between"
-                                        }}
-                                    >
+                                        <div
+                                            key={index}
+                                            className="admin-order-item"
+                                        >
 
-                                        <div>
+                                            <div>
 
-                                            <strong>
-                                                {
-                                                    item.productName
+                                                <strong>
+
+                                                    {
+                                                        item.productName
+
                                                         ||
-                                                        `Product #${item.productId}`
-                                                }
-                                            </strong>
 
-                                            <div
-                                                style={{
-                                                    color:
-                                                        "#6b7280",
-                                                    fontSize:
-                                                        "12px",
-                                                    marginTop:
-                                                        "4px"
-                                                }}
-                                            >
-                                                Qty:
-                                                {" "}
-                                                {
-                                                    item.quantity
-                                                }
+                                                        `Product #${item.productId}`
+                                                    }
+
+                                                </strong>
+
+
+                                                <div className="admin-order-item-meta">
+
+                                                    Qty:
+                                                    {" "}
+
+                                                    {
+                                                        item.quantity
+                                                    }
+
+                                                </div>
 
                                             </div>
 
+
+                                            <strong>
+
+                                                ₹
+                                                {Number(
+
+                                                    item.totalPrice
+
+                                                    ??
+
+                                                    (
+
+                                                        (
+                                                            item.price
+                                                            ??
+                                                            0
+                                                        )
+
+                                                        *
+
+                                                        (
+                                                            item.quantity
+                                                            ??
+                                                            0
+                                                        )
+
+                                                    )
+
+                                                ).toLocaleString(
+                                                    "en-IN"
+                                                )}
+
+                                            </strong>
+
                                         </div>
 
+                                    )
+                                )}
 
-                                        <strong>
-
-                                            ₹
-                                            {Number(
-                                                item.totalPrice ??
-                                                (
-                                                    (item.price ??
-                                                        0) *
-                                                    (item.quantity ??
-                                                        0)
-                                                )
-                                            ).toLocaleString(
-                                                "en-IN"
-                                            )}
-
-                                        </strong>
-
-                                    </div>
-
-                                )
-                            )}
-
-                        </div>
+                            </div>
 
 
-                        {/* UPDATE STATUS */}
+                            {/* ================================= */}
+                            {/* UPDATE STATUS */}
+                            {/* ================================= */}
 
-                        <div
-                            style={{
-                                marginTop:
-                                    "25px",
-                                paddingTop:
-                                    "20px",
-                                borderTop:
-                                    "1px solid #e5e7eb"
-                            }}
-                        >
-
-                            <label
-                                style={{
-                                    display:
-                                        "block",
-                                    fontWeight:
-                                        "600",
-                                    fontSize:
-                                        "13px",
-                                    marginBottom:
-                                        "8px"
-                                }}
-                            >
-                                Update Order Status
-                            </label>
+                            <div className="admin-order-status-section">
 
 
-                            <div
-                                style={{
-                                    display:
-                                        "flex",
-                                    gap:
-                                        "10px"
-                                }}
-                            >
+                                <label className="admin-form-label">
 
-                                <select
-                                    value={
-                                        selectedOrder
-                                            .orderStatus
-                                    }
-                                    disabled={
-                                        updatingStatus
-                                    }
-                                    onChange={e =>
-                                        updateStatus(
-                                            e.target
-                                                .value
-                                        )
-                                    }
-                                    style={{
-                                        flex: 1,
-                                        padding:
-                                            "10px",
-                                        border:
-                                            "1px solid #d1d5db",
-                                        borderRadius:
-                                            "8px",
-                                        background:
-                                            "white"
-                                    }}
-                                >
+                                    Update Order Status
 
-                                    <option value="PLACED">
-                                        PLACED
-                                    </option>
+                                </label>
 
-                                    <option value="CONFIRMED">
-                                        CONFIRMED
-                                    </option>
 
-                                    <option value="SHIPPED">
-                                        SHIPPED
-                                    </option>
+                                <div className="admin-status-update-row">
 
-                                    <option value="DELIVERED">
-                                        DELIVERED
-                                    </option>
+                                    <select
+                                        className="admin-filter-select"
+                                        value={
+                                            selectedOrder
+                                                .orderStatus
+                                        }
+                                        disabled={
+                                            updatingStatus
+                                        }
+                                        onChange={e =>
+                                            updateStatus(
+                                                e.target.value
+                                            )
+                                        }
+                                    >
 
-                                    <option value="CANCELLED">
-                                        CANCELLED
-                                    </option>
+                                        <option value="PLACED">
+                                            PLACED
+                                        </option>
 
-                                </select>
+                                        <option value="CONFIRMED">
+                                            CONFIRMED
+                                        </option>
+
+                                        <option value="PROCESSING">
+                                            PROCESSING
+                                        </option>
+
+                                        <option value="SHIPPED">
+                                            SHIPPED
+                                        </option>
+
+                                        <option value="DELIVERED">
+                                            DELIVERED
+                                        </option>
+
+                                        <option value="CANCELLED">
+                                            CANCELLED
+                                        </option>
+
+                                    </select>
+
+                                </div>
+
+
+                                {updatingStatus && (
+
+                                    <small className="admin-muted-text">
+
+                                        Updating status...
+
+                                    </small>
+
+                                )}
 
                             </div>
 
@@ -993,12 +1332,11 @@ const AdminOrders = () => {
 
                     </div>
 
-                </div>
-
-            )}
+                )}
 
         </div>
     );
 };
+
 
 export default AdminOrders;

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { Button, Card, Badge, Spinner, Alert } from "react-bootstrap";
 import { useNavigate } from "react-router-dom";
 import API from "../axios";
 
@@ -28,569 +27,295 @@ interface Order {
 }
 
 const MyOrders: React.FC = () => {
-
-    const [orders, setOrders] =
-        useState<Order[]>([]);
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState("");
-
-    const [cancellingId, setCancellingId] =
-        useState<number | null>(null);
+    const [orders, setOrders] = useState<Order[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string>("");
+    const [cancellingId, setCancellingId] = useState<number | null>(null);
 
     const navigate = useNavigate();
 
-
-    /*
-     * =========================
-     * FETCH ORDERS
-     * =========================
-     */
-
-    const fetchOrders = async () => {
-
+    // Fetch orders
+    const fetchOrders = async (): Promise<void> => {
         try {
-
             setLoading(true);
             setError("");
 
-            const response =
-                await API.get<Order[]>(
-                    "/customer/orders"
-                );
+            const response = await API.get<Order[]>("/customer/orders");
 
-            console.log(
-                "MY ORDERS:",
-                response.data
-            );
-
-            setOrders(
-                response.data
-            );
-
-        } catch (error: any) {
-
-            console.error(
-                "Error loading orders:",
-                error
-            );
-
-            console.error(
-                "STATUS:",
-                error?.response?.status
-            );
-
-            console.error(
-                "DATA:",
-                error?.response?.data
-            );
+            console.log("MY ORDERS:", response.data);
+            setOrders(response.data);
+        } catch (fetchError: any) {
+            console.error("Error loading orders:", fetchError);
 
             setError(
-                error?.response?.data ||
+                fetchError?.response?.data?.message ||
+                fetchError?.response?.data ||
                 "Unable to load your orders."
             );
-
         } finally {
-
             setLoading(false);
-
         }
     };
 
-
+    // Initial load
     useEffect(() => {
-
         fetchOrders();
-
     }, []);
 
+    // Cancel order
+    const cancelOrder = async (orderId: number): Promise<void> => {
+        const confirmed = window.confirm(`Are you sure you want to cancel Order #${orderId}?`);
 
-    /*
-     * =========================
-     * CANCEL ORDER
-     * =========================
-     */
-
-    const cancelOrder = async (
-        orderId: number
-    ) => {
-
-        const confirmed =
-            window.confirm(
-                `Are you sure you want to cancel Order #${orderId}?`
-            );
-
-        if (!confirmed) {
-            return;
-        }
+        if (!confirmed) return;
 
         try {
-
             setCancellingId(orderId);
-
-            await API.put(
-                `/customer/orders/${orderId}/cancel`
-            );
-
-            alert(
-                "Order cancelled successfully."
-            );
-
+            await API.put(`/customer/orders/${orderId}/cancel`);
             await fetchOrders();
-
-        } catch (error: any) {
-
-            console.error(
-                "Cancel order error:",
-                error
-            );
+        } catch (cancelError: any) {
+            console.error("Cancel order error:", cancelError);
 
             alert(
-                error?.response?.data ||
+                cancelError?.response?.data?.message ||
+                cancelError?.response?.data ||
                 "Unable to cancel order."
             );
-
         } finally {
-
             setCancellingId(null);
-
         }
     };
 
-
-    /*
-     * =========================
-     * STATUS BADGE
-     * =========================
-     */
-
-    const getStatusVariant = (
-        status: string
-    ) => {
-
+    // Order status class
+    const getOrderStatusClass = (status: string): string => {
         switch (status) {
-
             case "PLACED":
-                return "primary";
-
+                return "order-status-placed";
             case "CONFIRMED":
-                return "info";
-
+                return "order-status-confirmed";
             case "SHIPPED":
-                return "warning";
-
+                return "order-status-shipped";
             case "DELIVERED":
-                return "success";
-
+                return "order-status-delivered";
             case "CANCELLED":
-                return "danger";
-
+                return "order-status-cancelled";
             default:
-                return "secondary";
+                return "order-status-default";
         }
     };
 
+    // Payment status class
+    const getPaymentStatusClass = (status: string): string => {
+        if (status === "SUCCESS") return "payment-success";
+        if (status === "PENDING") return "payment-pending";
+        if (status === "FAILED") return "payment-failed";
 
-    /*
-     * =========================
-     * LOADING
-     * =========================
-     */
+        return "payment-default";
+    };
 
+    // Check if cancellable
+    const canCancelOrder = (status: string): boolean => {
+        return status !== "CANCELLED" && status !== "SHIPPED" && status !== "DELIVERED";
+    };
+
+    // Format date
+    const formatDate = (date: string): string => {
+        if (!date) return "N/A";
+
+        return new Date(date).toLocaleString("en-IN", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+    };
+
+    // Loading
     if (loading) {
-
         return (
-
-            <div
-                style={{
-                    paddingTop: "8rem",
-                    textAlign: "center"
-                }}
-            >
-
-                <Spinner animation="border" />
-
-                <p className="mt-3">
-                    Loading your orders...
-                </p>
-
-            </div>
-
+            <main className="orders-page">
+                <div className="orders-loading">
+                    <div className="orders-spinner" />
+                    <h3>Loading your orders</h3>
+                    <p>Please wait while we fetch your order history.</p>
+                </div>
+            </main>
         );
     }
 
-
-    /*
-     * =========================
-     * ERROR
-     * =========================
-     */
-
+    // Error
     if (error) {
-
         return (
-
-            <div
-                style={{
-                    paddingTop: "8rem",
-                    paddingLeft: "2rem",
-                    paddingRight: "2rem"
-                }}
-            >
-
-                <Alert variant="danger">
-                    {error}
-                </Alert>
-
-                <Button
-                    onClick={fetchOrders}
-                >
-                    Try Again
-                </Button>
-
-            </div>
-
+            <main className="orders-page">
+                <div className="orders-message-card orders-error-card">
+                    <div className="orders-message-icon">!</div>
+                    <h2>Unable to load orders</h2>
+                    <p>{error}</p>
+                    <button type="button" className="orders-primary-button" onClick={fetchOrders}>Try Again</button>
+                </div>
+            </main>
         );
     }
 
-
-    /*
-     * =========================
-     * EMPTY
-     * =========================
-     */
-
+    // Empty orders
     if (orders.length === 0) {
-
         return (
-
-            <div
-                style={{
-                    paddingTop: "8rem",
-                    textAlign: "center"
-                }}
-            >
-
-                <h3>
-                    No Orders Yet
-                </h3>
-
-                <p>
-                    You haven't placed any orders.
-                </p>
-
-                <Button
-                    variant="primary"
-                    onClick={() =>
-                        navigate("/")
-                    }
-                >
-                    Start Shopping
-                </Button>
-
-            </div>
-
+            <main className="orders-page">
+                <div className="orders-message-card">
+                    <div className="orders-message-icon">🛍</div>
+                    <h2>No orders yet</h2>
+                    <p>You haven't placed any orders yet. Start shopping and your orders will appear here.</p>
+                    <button type="button" className="orders-primary-button" onClick={() => navigate("/")}>Start Shopping</button>
+                </div>
+            </main>
         );
     }
-
-
-    /*
-     * =========================
-     * MAIN PAGE
-     * =========================
-     */
 
     return (
+        <main className="orders-page">
+            <div className="orders-wrapper">
+                {/* Page header */}
+                <div className="orders-page-header">
+                    <div>
+                        <p className="orders-eyebrow">PURCHASE HISTORY</p>
+                        <h1>My Orders</h1>
+                        <p className="orders-subtitle">Track and manage all your purchases in one place.</p>
+                    </div>
 
-        <div
-            style={{
-                paddingTop: "7rem",
-                paddingBottom: "3rem",
-                maxWidth: "1100px",
-                margin: "auto",
-                paddingLeft: "20px",
-                paddingRight: "20px"
-            }}
-        >
+                    <button type="button" className="orders-refresh-button" onClick={fetchOrders}>
+                        ↻ Refresh
+                    </button>
+                </div>
 
-            <div
-                className="d-flex justify-content-between align-items-center mb-4"
-            >
+                {/* Order count */}
+                <div className="orders-summary">
+                    <span>{orders.length}</span>
+                    <p>{orders.length === 1 ? "Order" : "Orders"}{" "}in your history</p>
+                </div>
 
-                <h2>
-                    My Orders
-                </h2>
-
-                <Button
-                    variant="outline-primary"
-                    onClick={fetchOrders}
-                >
-                    Refresh
-                </Button>
-
-            </div>
-
-
-            {orders.map(
-                (order) => (
-
-                    <Card
-                        key={order.orderId}
-                        className="mb-4 shadow-sm"  style={{ width: "auto"}}
-                    >
-
-                        <Card.Header>
-
-                            <div
-                                className="d-flex justify-content-between align-items-center"
-                            >
-
-                                <div>
-
-                                    <strong>
-                                        Order #{order.orderId}
-                                    </strong>
-
-                                    <br />
-
-                                    <small
-                                        className="text-muted"
-                                    >
-                                        {new Date(
-                                            order.createdAt
-                                        ).toLocaleString()}
-                                    </small>
-
+                {/* Orders */}
+                <section className="orders-list">
+                    {orders.map(order => (
+                        <article key={order.orderId} className="order-card">
+                            {/* Order header */}
+                            <div className="order-card-header">
+                                <div className="order-header-info">
+                                    <span className="order-number-label">ORDER</span>
+                                    <h2>#{order.orderId}</h2>
+                                    <p>Placed on {formatDate(order.createdAt)}</p>
                                 </div>
 
-
-                                <Badge
-                                    bg={getStatusVariant(
-                                        order.orderStatus
-                                    )}
-                                >
+                                <span className={`order-status ${getOrderStatusClass(order.orderStatus)}`}>
                                     {order.orderStatus}
-                                </Badge>
-
+                                </span>
                             </div>
 
-                        </Card.Header>
-
-
-                        <Card.Body>
-
-
-                            {/* ITEMS */}
-
-                            <h5>
-                                Items
-                            </h5>
-
-                            {order.items.map(
-                                (item) => (
-
-                                    <div
-                                        key={item.productId}
-                                        className="d-flex justify-content-between border-bottom py-2"
-                                    >
-
-                                        <div>
-
-                                            <strong>
-                                                {
-                                                    item.productName
-                                                }
-                                            </strong>
-
-                                            <div>
-                                                Quantity:{" "}
-                                                {
-                                                    item.quantity
-                                                }
-                                            </div>
-
-                                        </div>
-
-
-                                        <div>
-
-                                            ₹
-                                            {Number(
-                                                item.totalPrice
-                                            ).toFixed(2)}
-
-                                        </div>
-
+                            {/* Order body */}
+                            <div className="order-card-body">
+                                {/* Items */}
+                                <div className="order-items-section">
+                                    <div className="order-section-heading">
+                                        <h3>Items</h3>
+                                        <span>{order.items.length} {order.items.length === 1 ? "item" : "items"}</span>
                                     </div>
 
-                                )
-                            )}
+                                    <div className="order-items-list">
+                                        {order.items.map(item => (
+                                            <div key={item.productId} className="order-item-row">
+                                                <div className="order-item-main">
+                                                    <div className="order-item-placeholder">📦</div>
 
+                                                    <div>
+                                                        <h4>{item.productName}</h4>
+                                                        <p>
+                                                            ₹{Number(item.unitPrice).toLocaleString("en-IN")}{" · "}
+                                                            Qty{" "}{item.quantity}
+                                                        </p>
+                                                    </div>
+                                                </div>
 
-                            {/* TOTAL */}
-
-                            <div
-                                className="d-flex justify-content-between mt-3"
-                            >
-
-                                <strong>
-                                    Total
-                                </strong>
-
-                                <strong>
-                                    ₹
-                                    {Number(
-                                        order.totalAmount
-                                    ).toFixed(2)}
-                                </strong>
-
-                            </div>
-
-
-                            {/* PAYMENT */}
-
-                            <div className="mt-3">
-
-                                <strong>
-                                    Payment:
-                                </strong>{" "}
-
-                                <Badge
-                                    bg={
-                                        order.paymentStatus ===
-                                        "SUCCESS"
-                                            ? "success"
-                                            : "secondary"
-                                    }
-                                >
-                                    {
-                                        order.paymentStatus
-                                    }
-                                </Badge>
-
-                            </div>
-
-
-                            {/* ADDRESS */}
-
-                            <div className="mt-4">
-
-                                <h5>
-                                    Delivery Address
-                                </h5>
-
-                                <div>
-
-                                    <strong>
-                                        {
-                                            order.shippingFullName
-                                        }
-                                    </strong>
-
-                                    <br />
-
-                                    {
-                                        order.shippingAddressLine
-                                    }
-
-                                    <br />
-
-                                    {
-                                        order.shippingCity
-                                    },{" "}
-                                    {
-                                        order.shippingState
-                                    } -{" "}
-                                    {
-                                        order.shippingPostalCode
-                                    }
-
-                                    <br />
-
-                                    Phone:{" "}
-                                    {
-                                        order.shippingPhone
-                                    }
-
-                                    {order.shippingLandmark && (
-
-                                        <>
-                                            <br />
-
-                                            Landmark:{" "}
-                                            {
-                                                order.shippingLandmark
-                                            }
-                                        </>
-
-                                    )}
-
+                                                <strong className="order-item-price">
+                                                    ₹{Number(item.totalPrice).toLocaleString("en-IN", {
+                                                        minimumFractionDigits: 2,
+                                                        maximumFractionDigits: 2
+                                                    })}
+                                                </strong>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
 
+                                {/* Order details */}
+                                <aside className="order-details-panel">
+                                    {/* Total */}
+                                    <div className="order-total-box">
+                                        <span>Order Total</span>
+                                        <strong>
+                                            ₹{Number(order.totalAmount).toLocaleString("en-IN", {
+                                                minimumFractionDigits: 2,
+                                                maximumFractionDigits: 2
+                                            })}
+                                        </strong>
+                                    </div>
+
+                                    {/* Payment */}
+                                    <div className="order-detail-block">
+                                        <span className="order-detail-label">PAYMENT</span>
+                                        <span className={`payment-status ${getPaymentStatusClass(order.paymentStatus)}`}>
+                                            {order.paymentStatus}
+                                        </span>
+                                    </div>
+
+                                    {/* Address */}
+                                    <div className="order-detail-block">
+                                        <span className="order-detail-label">DELIVERY ADDRESS</span>
+
+                                        <div className="order-address">
+                                            <strong>{order.shippingFullName}</strong>
+
+                                            <p>
+                                                {order.shippingAddressLine}<br />
+                                                {order.shippingCity}, {order.shippingState} - {order.shippingPostalCode}<br />
+                                                Phone: {order.shippingPhone}
+
+                                                {order.shippingLandmark && (
+                                                    <>
+                                                        <br />
+                                                        Landmark: {order.shippingLandmark}
+                                                    </>
+                                                )}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </aside>
                             </div>
 
-
-                            {/* ACTIONS */}
-
-                            <div
-                                className="mt-4 d-flex gap-2"
-                            >
-
-                                <Button
-                                    variant="outline-primary"
-                                    onClick={() =>
-                                        navigate(
-                                            `/orders/${order.orderId}`
-                                        )
-                                    }
+                            {/* Actions */}
+                            <div className="order-card-footer">
+                                <button
+                                    type="button"
+                                    className="order-details-button"
+                                    onClick={() => navigate(`/orders/${order.orderId}`)}
                                 >
-                                    View Details
-                                </Button>
+                                    View Details →
+                                </button>
 
-
-                                {order.orderStatus !==
-                                    "CANCELLED" &&
-                                    order.orderStatus !==
-                                        "SHIPPED" &&
-                                    order.orderStatus !==
-                                        "DELIVERED" && (
-
-                                    <Button
-                                        variant="outline-danger"
-                                        disabled={
-                                            cancellingId ===
-                                            order.orderId
-                                        }
-                                        onClick={() =>
-                                            cancelOrder(
-                                                order.orderId
-                                            )
-                                        }
+                                {canCancelOrder(order.orderStatus) && (
+                                    <button
+                                        type="button"
+                                        className="order-cancel-button"
+                                        disabled={cancellingId === order.orderId}
+                                        onClick={() => cancelOrder(order.orderId)}
                                     >
-
-                                        {cancellingId ===
-                                        order.orderId
-                                            ? "Cancelling..."
-                                            : "Cancel Order"}
-
-                                    </Button>
-
+                                        {cancellingId === order.orderId ? "Cancelling..." : "Cancel Order"}
+                                    </button>
                                 )}
-
                             </div>
-
-                        </Card.Body>
-
-                    </Card>
-
-                )
-            )}
-
-        </div>
-
+                        </article>
+                    ))}
+                </section>
+            </div>
+        </main>
     );
 };
 

@@ -1,21 +1,42 @@
-import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, {
+    useEffect,
+    useState
+} from "react";
+
+import {
+    useNavigate
+} from "react-router-dom";
+
 import API from "../axios";
 
+
 interface Vendor {
+
     id: number;
+
     shopName: string;
+
     email: string;
 }
 
+
 interface Category {
+
     id: number;
+
     name: string;
 }
 
+
 const AdminAddProduct = () => {
 
-    const navigate = useNavigate();
+    const navigate =
+        useNavigate();
+
+
+    // =====================================================
+    // FORM STATE
+    // =====================================================
 
     const [name, setName] =
         useState("");
@@ -47,11 +68,21 @@ const AdminAddProduct = () => {
     const [imageFile, setImageFile] =
         useState<File | null>(null);
 
+
+    // =====================================================
+    // DATA STATE
+    // =====================================================
+
     const [vendors, setVendors] =
         useState<Vendor[]>([]);
 
     const [categories, setCategories] =
         useState<Category[]>([]);
+
+
+    // =====================================================
+    // PAGE STATE
+    // =====================================================
 
     const [loading, setLoading] =
         useState(true);
@@ -63,9 +94,10 @@ const AdminAddProduct = () => {
         useState("");
 
 
-    /*
-     * Load vendors + categories
-     */
+    // =====================================================
+    // LOAD VENDORS + CATEGORIES
+    // =====================================================
+
     useEffect(() => {
 
         const loadData = async () => {
@@ -73,6 +105,9 @@ const AdminAddProduct = () => {
             try {
 
                 setLoading(true);
+
+                setError("");
+
 
                 const [
                     vendorsResponse,
@@ -94,11 +129,11 @@ const AdminAddProduct = () => {
                     vendorsResponse.data
                 );
 
+
                 setCategories(
                     categoriesResponse.data
                 );
 
-                setError("");
 
             } catch (err: any) {
 
@@ -106,6 +141,7 @@ const AdminAddProduct = () => {
                     "Admin product form error:",
                     err
                 );
+
 
                 setError(
                     err?.response?.data ||
@@ -124,6 +160,10 @@ const AdminAddProduct = () => {
     }, []);
 
 
+    // =====================================================
+    // SUBMIT
+    // =====================================================
+
     const handleSubmit = async (
         e: React.FormEvent<HTMLFormElement>
     ) => {
@@ -133,10 +173,37 @@ const AdminAddProduct = () => {
         setError("");
 
 
-        if (!vendorId) {
+        // -------------------------------------------------
+        // VALIDATION
+        // -------------------------------------------------
+
+        if (!name.trim()) {
 
             setError(
-                "Please select a vendor."
+                "Please enter a product name."
+            );
+
+            return;
+        }
+
+
+        if (!price || Number(price) <= 0) {
+
+            setError(
+                "Please enter a valid price."
+            );
+
+            return;
+        }
+
+
+        if (
+            !stockQuantity ||
+            Number(stockQuantity) < 0
+        ) {
+
+            setError(
+                "Please enter a valid stock quantity."
             );
 
             return;
@@ -153,6 +220,16 @@ const AdminAddProduct = () => {
         }
 
 
+        if (!vendorId) {
+
+            setError(
+                "Please select a vendor."
+            );
+
+            return;
+        }
+
+
         try {
 
             setSaving(true);
@@ -160,11 +237,14 @@ const AdminAddProduct = () => {
 
             const product = {
 
-                name,
+                name:
+                    name.trim(),
 
-                description,
+                description:
+                    description.trim(),
 
-                brand,
+                brand:
+                    brand.trim(),
 
                 price:
                     Number(price),
@@ -175,15 +255,15 @@ const AdminAddProduct = () => {
                 vendorId:
                     Number(vendorId),
 
+                stockQuantity:
+                    Number(stockQuantity),
+
                 releaseDate:
                     releaseDate
                         ? `${releaseDate}T00:00:00`
                         : null,
 
-                productAvailable,
-
-                stockQuantity:
-                    Number(stockQuantity)
+                productAvailable
 
             };
 
@@ -194,12 +274,14 @@ const AdminAddProduct = () => {
 
             formData.append(
                 "product",
+
                 new Blob(
                     [
                         JSON.stringify(
                             product
                         )
                     ],
+
                     {
                         type:
                             "application/json"
@@ -223,11 +305,6 @@ const AdminAddProduct = () => {
             );
 
 
-            alert(
-                "Product added successfully!"
-            );
-
-
             navigate(
                 "/admin/products"
             );
@@ -236,17 +313,24 @@ const AdminAddProduct = () => {
         } catch (err: any) {
 
             console.error(
-                "Add admin product error:",
+                "Add product error:",
                 err
             );
+
 
             const responseData =
                 err?.response?.data;
 
+
             setError(
-                typeof responseData === "string"
+
+                typeof responseData ===
+                "string"
+
                     ? responseData
+
                     : "Unable to add product."
+
             );
 
         } finally {
@@ -256,32 +340,41 @@ const AdminAddProduct = () => {
     };
 
 
+    // =====================================================
+    // LOADING
+    // =====================================================
+
     if (loading) {
 
         return (
 
-            <div className="admin-page">
+            <div className="admin-customers-page">
 
-                <h1>
-                    Add Product
-                </h1>
+                <div className="customer-loading">
 
-                <p>
-                    Loading form...
-                </p>
+                    Loading product form...
+
+                </div>
 
             </div>
         );
     }
 
 
+    // =====================================================
+    // PAGE
+    // =====================================================
+
     return (
 
-        <div className="admin-page">
+        <div className="admin-customers-page">
 
-            <div
-                className="admin-page-header"
-            >
+
+            {/* ============================================= */}
+            {/* HEADER */}
+            {/* ============================================= */}
+
+            <div className="customers-header">
 
                 <div>
 
@@ -295,40 +388,92 @@ const AdminAddProduct = () => {
 
                 </div>
 
+
+                <button
+                    type="button"
+                    className="customer-add-button"
+                    onClick={() =>
+                        navigate(
+                            "/admin/products"
+                        )
+                    }
+                >
+                    ← Back to Products
+                </button>
+
             </div>
 
 
+            {/* ============================================= */}
+            {/* ERROR */}
+            {/* ============================================= */}
+
             {error && (
 
-                <div className="alert alert-danger">
+                <div className="customer-error">
+
                     {error}
+
                 </div>
 
             )}
 
 
-            <div className="card shadow-sm" style={{width: "auto"}}>
+            {/* ============================================= */}
+            {/* FORM */}
+            {/* ============================================= */}
 
-                <div className="card-body">
+            <div className="admin-product-form-card">
 
-                    <form
-                        onSubmit={handleSubmit}
-                    >
+                <div className="admin-product-form-header">
 
-                        <div className="row g-3">
+                    <div>
+
+                        <h2>
+                            Product Information
+                        </h2>
+
+                        <p>
+                            Enter the details for the
+                            new product.
+                        </p>
+
+                    </div>
+
+                </div>
+
+
+                <form
+                    onSubmit={handleSubmit}
+                    className="admin-product-form"
+                >
+
+
+                    {/* ========================================= */}
+                    {/* BASIC INFORMATION */}
+                    {/* ========================================= */}
+
+                    <div className="admin-form-section">
+
+                        <h3>
+                            Basic Information
+                        </h3>
+
+
+                        <div className="admin-form-grid">
 
 
                             {/* PRODUCT NAME */}
 
-                            <div className="col-md-6">
+                            <div className="admin-form-field">
 
-                                <label className="form-label">
+                                <label>
                                     Product Name
                                 </label>
 
                                 <input
                                     type="text"
-                                    className="form-control"
+                                    placeholder="Enter product name"
                                     value={name}
                                     onChange={e =>
                                         setName(
@@ -343,15 +488,15 @@ const AdminAddProduct = () => {
 
                             {/* BRAND */}
 
-                            <div className="col-md-6">
+                            <div className="admin-form-field">
 
-                                <label className="form-label">
+                                <label>
                                     Brand
                                 </label>
 
                                 <input
                                     type="text"
-                                    className="form-control"
+                                    placeholder="Enter brand name"
                                     value={brand}
                                     onChange={e =>
                                         setBrand(
@@ -362,42 +507,60 @@ const AdminAddProduct = () => {
 
                             </div>
 
+                        </div>
 
-                            {/* DESCRIPTION */}
 
-                            <div className="col-12">
+                        {/* DESCRIPTION */}
 
-                                <label className="form-label">
-                                    Description
-                                </label>
+                        <div className="admin-form-field">
 
-                                <textarea
-                                    className="form-control"
-                                    rows={4}
-                                    value={description}
-                                    onChange={e =>
-                                        setDescription(
-                                            e.target.value
-                                        )
-                                    }
-                                />
+                            <label>
+                                Description
+                            </label>
 
-                            </div>
+                            <textarea
+                                rows={5}
+                                placeholder="Describe the product..."
+                                value={description}
+                                onChange={e =>
+                                    setDescription(
+                                        e.target.value
+                                    )
+                                }
+                            />
+
+                        </div>
+
+                    </div>
+
+
+                    {/* ========================================= */}
+                    {/* PRICE + STOCK */}
+                    {/* ========================================= */}
+
+                    <div className="admin-form-section">
+
+                        <h3>
+                            Pricing & Inventory
+                        </h3>
+
+
+                        <div className="admin-form-grid admin-form-grid-three">
 
 
                             {/* PRICE */}
 
-                            <div className="col-md-4">
+                            <div className="admin-form-field">
 
-                                <label className="form-label">
-                                    Price
+                                <label>
+                                    Price (₹)
                                 </label>
 
                                 <input
                                     type="number"
-                                    className="form-control"
                                     min="0.01"
                                     step="0.01"
+                                    placeholder="0.00"
                                     value={price}
                                     onChange={e =>
                                         setPrice(
@@ -412,16 +575,17 @@ const AdminAddProduct = () => {
 
                             {/* STOCK */}
 
-                            <div className="col-md-4">
+                            <div className="admin-form-field">
 
-                                <label className="form-label">
+                                <label>
                                     Stock Quantity
                                 </label>
 
                                 <input
                                     type="number"
-                                    className="form-control"
                                     min="0"
+                                    step="1"
+                                    placeholder="0"
                                     value={stockQuantity}
                                     onChange={e =>
                                         setStockQuantity(
@@ -436,15 +600,14 @@ const AdminAddProduct = () => {
 
                             {/* RELEASE DATE */}
 
-                            <div className="col-md-4">
+                            <div className="admin-form-field">
 
-                                <label className="form-label">
+                                <label>
                                     Release Date
                                 </label>
 
                                 <input
                                     type="date"
-                                    className="form-control"
                                     value={releaseDate}
                                     onChange={e =>
                                         setReleaseDate(
@@ -455,17 +618,34 @@ const AdminAddProduct = () => {
 
                             </div>
 
+                        </div>
+
+                    </div>
+
+
+                    {/* ========================================= */}
+                    {/* CATEGORY + VENDOR */}
+                    {/* ========================================= */}
+
+                    <div className="admin-form-section">
+
+                        <h3>
+                            Classification
+                        </h3>
+
+
+                        <div className="admin-form-grid">
+
 
                             {/* CATEGORY */}
 
-                            <div className="col-md-6">
+                            <div className="admin-form-field">
 
-                                <label className="form-label">
+                                <label>
                                     Category
                                 </label>
 
                                 <select
-                                    className="form-select"
                                     value={categoryId}
                                     onChange={e =>
                                         setCategoryId(
@@ -479,6 +659,7 @@ const AdminAddProduct = () => {
                                         Select Category
                                     </option>
 
+
                                     {categories.map(
                                         category => (
 
@@ -490,9 +671,11 @@ const AdminAddProduct = () => {
                                                     category.id
                                                 }
                                             >
+
                                                 {
                                                     category.name
                                                 }
+
                                             </option>
 
                                         )
@@ -505,14 +688,13 @@ const AdminAddProduct = () => {
 
                             {/* VENDOR */}
 
-                            <div className="col-md-6">
+                            <div className="admin-form-field">
 
-                                <label className="form-label">
+                                <label>
                                     Vendor
                                 </label>
 
                                 <select
-                                    className="form-select"
                                     value={vendorId}
                                     onChange={e =>
                                         setVendorId(
@@ -525,6 +707,7 @@ const AdminAddProduct = () => {
                                     <option value="">
                                         Select Vendor
                                     </option>
+
 
                                     {vendors.map(
                                         vendor => (
@@ -542,7 +725,7 @@ const AdminAddProduct = () => {
                                                     vendor.shopName
                                                 }
 
-                                                {" - "}
+                                                {" — "}
 
                                                 {
                                                     vendor.email
@@ -557,105 +740,127 @@ const AdminAddProduct = () => {
 
                             </div>
 
+                        </div>
 
-                            {/* IMAGE */}
-
-                            <div className="col-12">
-
-                                <label className="form-label">
-                                    Product Image
-                                </label>
-
-                                <input
-                                    type="file"
-                                    className="form-control"
-                                    accept="image/*"
-                                    onChange={e =>
-                                        setImageFile(
-                                            e.target.files?.[0] ||
-                                            null
-                                        )
-                                    }
-                                />
-
-                            </div>
+                    </div>
 
 
-                            {/* AVAILABILITY */}
+                    {/* ========================================= */}
+                    {/* IMAGE + AVAILABILITY */}
+                    {/* ========================================= */}
 
-                            <div className="col-12">
+                    <div className="admin-form-section">
 
-                                <div className="form-check">
-
-                                    <input
-                                        type="checkbox"
-                                        className="form-check-input"
-                                        id="productAvailable"
-                                        checked={
-                                            productAvailable
-                                        }
-                                        onChange={e =>
-                                            setProductAvailable(
-                                                e.target.checked
-                                            )
-                                        }
-                                    />
-
-                                    <label
-                                        className="form-check-label"
-                                        htmlFor="productAvailable"
-                                    >
-                                        Product Available
-                                    </label>
-
-                                </div>
-
-                            </div>
+                        <h3>
+                            Product Media & Status
+                        </h3>
 
 
-                            {/* BUTTONS */}
+                        {/* IMAGE */}
 
-                            <div
-                                className="col-12 d-flex gap-2 mt-4"
-                            >
+                        <div className="admin-form-field">
 
-                                <button
-                                    type="submit"
-                                    className="btn btn-primary"
-                                    disabled={saving}
-                                >
+                            <label>
+                                Product Image
+                            </label>
 
-                                    {saving
-                                        ? "Adding Product..."
-                                        : "Add Product"}
+                            <input
+                                type="file"
+                                accept="image/*"
+                                onChange={e =>
+                                    setImageFile(
+                                        e.target.files?.[0] ||
+                                        null
+                                    )
+                                }
+                            />
 
-                                </button>
-
-
-                                <button
-                                    type="button"
-                                    className="btn btn-secondary"
-                                    onClick={() =>
-                                        navigate(
-                                            "/admin/products"
-                                        )
-                                    }
-                                >
-                                    Cancel
-                                </button>
-
-                            </div>
+                            <small>
+                                Upload an image for this
+                                product.
+                            </small>
 
                         </div>
 
-                    </form>
 
-                </div>
+                        {/* AVAILABILITY */}
+
+                        <label
+                            className="admin-checkbox-row"
+                        >
+
+                            <input
+                                type="checkbox"
+                                checked={
+                                    productAvailable
+                                }
+                                onChange={e =>
+                                    setProductAvailable(
+                                        e.target.checked
+                                    )
+                                }
+                            />
+
+                            <span>
+
+                                <strong>
+                                    Product Available
+                                </strong>
+
+                                <small>
+                                    Customers can purchase
+                                    this product when enabled.
+                                </small>
+
+                            </span>
+
+                        </label>
+
+                    </div>
+
+
+                    {/* ========================================= */}
+                    {/* ACTIONS */}
+                    {/* ========================================= */}
+
+                    <div className="admin-form-actions">
+
+                        <button
+                            type="button"
+                            className="admin-form-cancel-button"
+                            onClick={() =>
+                                navigate(
+                                    "/admin/products"
+                                )
+                            }
+                            disabled={saving}
+                        >
+                            Cancel
+                        </button>
+
+
+                        <button
+                            type="submit"
+                            className="admin-form-submit-button"
+                            disabled={saving}
+                        >
+
+                            {saving
+                                ? "Adding Product..."
+                                : "Add Product"
+                            }
+
+                        </button>
+
+                    </div>
+
+                </form>
 
             </div>
 
         </div>
     );
 };
+
 
 export default AdminAddProduct;

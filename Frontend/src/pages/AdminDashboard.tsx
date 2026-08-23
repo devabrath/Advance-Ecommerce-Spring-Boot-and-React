@@ -1,6 +1,18 @@
 import React, { useEffect, useState } from "react";
 import API from "../axios";
 
+import {
+    ResponsiveContainer,
+    LineChart,
+    Line,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    Legend
+} from "recharts";
+
+
 type Period =
     | "week"
     | "month"
@@ -14,14 +26,35 @@ interface RevenuePoint {
 }
 
 
+interface OrderStatusPoint {
+
+    label: string;
+
+    placed: number;
+    confirmed: number;
+    processing: number;
+    shipped: number;
+    delivered: number;
+    cancelled: number;
+
+    paymentSuccess: number;
+    paymentPending: number;
+    paymentFailed: number;
+}
+
+
 interface DashboardData {
+
     totalRevenue: number;
     totalOrders: number;
     totalProducts: number;
     totalUsers: number;
     totalVendors: number;
     pendingOrders: number;
+
     revenueData: RevenuePoint[];
+
+    orderStatusData: OrderStatusPoint[];
 }
 
 
@@ -43,6 +76,10 @@ const AdminDashboard = () => {
         useState("");
 
 
+    // =====================================================
+    // FETCH DASHBOARD
+    // =====================================================
+
     const fetchDashboard = async (
         selectedPeriod: Period
     ) => {
@@ -51,10 +88,12 @@ const AdminDashboard = () => {
 
             setLoading(true);
 
+
             const response =
                 await API.get<DashboardData>(
                     `/admin/dashboard?period=${selectedPeriod}`
                 );
+
 
             setData(response.data);
 
@@ -66,6 +105,7 @@ const AdminDashboard = () => {
                 "Dashboard error:",
                 err
             );
+
 
             setError(
                 err?.response?.data ||
@@ -86,9 +126,14 @@ const AdminDashboard = () => {
     }, [period]);
 
 
+    // =====================================================
+    // LOADING
+    // =====================================================
+
     if (loading) {
 
         return (
+
             <div className="admin-dashboard-loading">
 
                 <div className="loading-spinner"></div>
@@ -102,9 +147,14 @@ const AdminDashboard = () => {
     }
 
 
+    // =====================================================
+    // ERROR
+    // =====================================================
+
     if (error) {
 
         return (
+
             <div className="admin-dashboard">
 
                 <div className="dashboard-error">
@@ -121,6 +171,11 @@ const AdminDashboard = () => {
     }
 
 
+    // =====================================================
+    // EXISTING REVENUE LOGIC
+    // KEEPING THIS EXACTLY
+    // =====================================================
+
     const maxRevenue =
         Math.max(
             ...data.revenueData.map(
@@ -135,7 +190,10 @@ const AdminDashboard = () => {
 
         <div className="admin-dashboard">
 
+
+            {/* ================================================= */}
             {/* HEADER */}
+            {/* ================================================= */}
 
             <div className="dashboard-header">
 
@@ -146,6 +204,7 @@ const AdminDashboard = () => {
                     </h3> */}
 
                 </div>
+
 
                 <div className="dashboard-date">
 
@@ -164,9 +223,14 @@ const AdminDashboard = () => {
             </div>
 
 
+            {/* ================================================= */}
             {/* STAT CARDS */}
+            {/* ================================================= */}
 
             <div className="dashboard-stats">
+
+
+                {/* TOTAL REVENUE */}
 
                 <div className="dashboard-card">
 
@@ -198,6 +262,8 @@ const AdminDashboard = () => {
                 </div>
 
 
+                {/* TOTAL ORDERS */}
+
                 <div className="dashboard-card">
 
                     <div className="stat-top">
@@ -222,6 +288,8 @@ const AdminDashboard = () => {
 
                 </div>
 
+
+                {/* TOTAL PRODUCTS */}
 
                 <div className="dashboard-card">
 
@@ -248,6 +316,8 @@ const AdminDashboard = () => {
                 </div>
 
 
+                {/* TOTAL USERS */}
+
                 <div className="dashboard-card">
 
                     <div className="stat-top">
@@ -273,6 +343,8 @@ const AdminDashboard = () => {
                 </div>
 
 
+                {/* VENDORS */}
+
                 <div className="dashboard-card">
 
                     <div className="stat-top">
@@ -297,6 +369,8 @@ const AdminDashboard = () => {
 
                 </div>
 
+
+                {/* PENDING ORDERS */}
 
                 <div className="dashboard-card">
 
@@ -325,7 +399,9 @@ const AdminDashboard = () => {
             </div>
 
 
-            {/* REVENUE PANEL */}
+            {/* ================================================= */}
+            {/* REVENUE PANEL - DO NOT CHANGE
+            {/* ================================================= */}
 
             <div className="dashboard-panel">
 
@@ -359,6 +435,7 @@ const AdminDashboard = () => {
                             Week
                         </button>
 
+
                         <button
                             className={
                                 period === "month"
@@ -371,6 +448,7 @@ const AdminDashboard = () => {
                         >
                             Month
                         </button>
+
 
                         <button
                             className={
@@ -444,6 +522,7 @@ const AdminDashboard = () => {
                                             (revenue /
                                                 maxRevenue) *
                                                 100,
+
                                             revenue > 0
                                                 ? 5
                                                 : 2
@@ -504,6 +583,310 @@ const AdminDashboard = () => {
                             )}
 
                         </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            {/* ================================================= */}
+            {/* SMALL CHARTS - SIDE BY SIDE
+            {/* ================================================= */}
+
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                        "repeat(2, minmax(0, 1fr))",
+                    gap: "20px",
+                    marginTop: "20px",
+                    marginBottom: "30px"
+                }}
+            >
+
+
+                {/* ================================================= */}
+                {/* ORDER ACTIVITY */}
+                {/* ================================================= */}
+
+                <div
+                    className="dashboard-panel"
+                    style={{
+                        margin: 0,
+                        padding: "18px"
+                    }}
+                >
+
+                    <div
+                        className="panel-header"
+                        style={{
+                            marginBottom: "10px"
+                        }}
+                    >
+
+                        <div>
+
+                            <h3>
+                                Order Activity
+                            </h3>
+
+                            <p>
+                                Order status
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        style={{
+                            width: "100%",
+                            height: "280px"
+                        }}
+                    >
+
+                        <ResponsiveContainer
+                            width="100%"
+                            height="100%"
+                        >
+
+                            <LineChart
+                                data={
+                                    data.orderStatusData
+                                }
+                                margin={{
+                                    top: 10,
+                                    right: 5,
+                                    left: -20,
+                                    bottom: 5
+                                }}
+                            >
+
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                />
+
+
+                                <XAxis
+                                    dataKey="label"
+                                    tick={{
+                                        fontSize: 11
+                                    }}
+                                />
+
+
+                                <YAxis
+                                    allowDecimals={false}
+                                    tick={{
+                                        fontSize: 11
+                                    }}
+                                />
+
+
+                                <Tooltip />
+
+
+                                <Legend
+                                    wrapperStyle={{
+                                        fontSize:
+                                            "11px"
+                                    }}
+                                />
+
+
+                                <Line
+                                    type="monotone"
+                                    dataKey="placed"
+                                    name="Placed"
+                                    stroke="#2563eb"
+                                    strokeWidth={2}
+                                    dot={false}
+                                />
+
+
+                                <Line
+                                    type="monotone"
+                                    dataKey="confirmed"
+                                    name="Confirmed"
+                                    stroke="#16a34a"
+                                    strokeWidth={2}
+                                    dot={false}
+                                />
+
+
+                                <Line
+                                    type="monotone"
+                                    dataKey="processing"
+                                    name="Processing"
+                                    stroke="#9333ea"
+                                    strokeWidth={2}
+                                    dot={false}
+                                />
+
+
+                                <Line
+                                    type="monotone"
+                                    dataKey="shipped"
+                                    name="Shipped"
+                                    stroke="#ea580c"
+                                    strokeWidth={2}
+                                    dot={false}
+                                />
+
+
+                                <Line
+                                    type="monotone"
+                                    dataKey="delivered"
+                                    name="Delivered"
+                                    stroke="#0891b2"
+                                    strokeWidth={2}
+                                    dot={false}
+                                />
+
+
+                                <Line
+                                    type="monotone"
+                                    dataKey="cancelled"
+                                    name="Cancelled"
+                                    stroke="#dc2626"
+                                    strokeWidth={2}
+                                    dot={false}
+                                />
+
+                            </LineChart>
+
+                        </ResponsiveContainer>
+
+                    </div>
+
+                </div>
+
+
+                {/* ================================================= */}
+                {/* PAYMENT ACTIVITY */}
+                {/* ================================================= */}
+
+                <div
+                    className="dashboard-panel"
+                    style={{
+                        margin: 0,
+                        padding: "18px"
+                    }}
+                >
+
+                    <div
+                        className="panel-header"
+                        style={{
+                            marginBottom: "10px"
+                        }}
+                    >
+
+                        <div>
+
+                            <h3>
+                                Payment Activity
+                            </h3>
+
+                            <p>
+                                Payment status
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        style={{
+                            width: "100%",
+                            height: "280px"
+                        }}
+                    >
+
+                        <ResponsiveContainer
+                            width="100%"
+                            height="100%"
+                        >
+
+                            <LineChart
+                                data={
+                                    data.orderStatusData
+                                }
+                                margin={{
+                                    top: 10,
+                                    right: 5,
+                                    left: -20,
+                                    bottom: 5
+                                }}
+                            >
+
+                                <CartesianGrid
+                                    strokeDasharray="3 3"
+                                />
+
+
+                                <XAxis
+                                    dataKey="label"
+                                    tick={{
+                                        fontSize: 11
+                                    }}
+                                />
+
+
+                                <YAxis
+                                    allowDecimals={false}
+                                    tick={{
+                                        fontSize: 11
+                                    }}
+                                />
+
+
+                                <Tooltip />
+
+
+                                <Legend
+                                    wrapperStyle={{
+                                        fontSize:
+                                            "11px"
+                                    }}
+                                />
+
+
+                                <Line
+                                    type="monotone"
+                                    dataKey="paymentSuccess"
+                                    name="Success"
+                                    stroke="#16a34a"
+                                    strokeWidth={2}
+                                    dot={false}
+                                />
+
+
+                                <Line
+                                    type="monotone"
+                                    dataKey="paymentPending"
+                                    name="Pending"
+                                    stroke="#ca8a04"
+                                    strokeWidth={2}
+                                    dot={false}
+                                />
+
+
+                                <Line
+                                    type="monotone"
+                                    dataKey="paymentFailed"
+                                    name="Failed"
+                                    stroke="#dc2626"
+                                    strokeWidth={2}
+                                    dot={false}
+                                />
+
+                            </LineChart>
+
+                        </ResponsiveContainer>
 
                     </div>
 

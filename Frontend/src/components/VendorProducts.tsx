@@ -1,381 +1,175 @@
-import React, {
-    useEffect,
-    useState
-} from "react";
-
-import {
-    Link,
-    useNavigate
-} from "react-router-dom";
-
+import React, { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import API from "../axios";
 
 interface Product {
     id: number;
     name: string;
-    description: string;
-    brand: string;
+    description?: string;
     price: number;
-    categoryId: number | null;
-    categoryName: string | null;
-    vendorId: number | null;
-    shopName: string | null;
-    releaseDate: string | null;
-    productAvailable: boolean;
     stockQuantity: number;
-    imageName: string | null;
-    imageType: string | null;
+    productAvailable: boolean;
+    brand: string;
+    categoryId?: number | null;
+    categoryName?: string | null;
+    vendorId?: number | null;
+    shopName?: string | null;
 }
 
 const VendorProducts = () => {
-
     const navigate = useNavigate();
-
-    const [products, setProducts] =
-        useState<Product[]>([]);
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState("");
-
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("ALL");
 
     const fetchProducts = async () => {
-
         try {
-
             setLoading(true);
-
-            const response =
-                await API.get<Product[]>(
-                    "/vendor/products"
-                );
-
-            setProducts(
-                response.data
-            );
-
+            const response = await API.get<Product[]>("/vendor/products");
+            setProducts(response.data);
             setError("");
-
-        } catch (error: any) {
-
-            console.error(
-                "Error fetching vendor products:",
-                error
-            );
-
-            setError(
-                error?.response?.data ||
-                "Unable to load your products."
-            );
-
+        } catch (err: any) {
+            console.error("Vendor products error:", err);
+            setError(err?.response?.data || "Unable to load your products.");
         } finally {
-
             setLoading(false);
         }
     };
 
-
     useEffect(() => {
-
         fetchProducts();
-
     }, []);
 
-
-    const handleDelete = async (
-        productId: number
-    ) => {
-
-        const confirmed =
-            window.confirm(
-                "Are you sure you want to delete this product?"
-            );
-
-        if (!confirmed) {
-            return;
-        }
+    const handleDelete = async (productId: number) => {
+        const confirmed = window.confirm("Are you sure you want to delete this product?");
+        if (!confirmed) return;
 
         try {
-
-            await API.delete(
-                `/vendor/products/${productId}`
-            );
-
-            setProducts(
-                previous =>
-                    previous.filter(
-                        product =>
-                            product.id !== productId
-                    )
-            );
-
-            alert(
-                "Product deleted successfully."
-            );
-
-        } catch (error: any) {
-
-            console.error(
-                "Error deleting product:",
-                error
-            );
-
-            alert(
-                error?.response?.data ||
-                "Unable to delete product."
-            );
+            await API.delete(`/vendor/products/${productId}`);
+            setProducts(previous => previous.filter(product => product.id !== productId));
+            alert("Product deleted successfully.");
+        } catch (err: any) {
+            console.error("Delete product error:", err);
+            alert(err?.response?.data || "Unable to delete product.");
         }
     };
 
+    const filteredProducts = useMemo(() => {
+        const value = search.trim().toLowerCase();
 
-    const getImageUrl = (
-        productId: number
-    ) => {
+        return products.filter(product => {
+            const searchable = `${product.name} ${product.brand || ""} ${product.categoryName || ""} ${product.shopName || ""}`.toLowerCase();
+            const matchesSearch = searchable.includes(value);
 
-        return `${API.defaults.baseURL}/product/${productId}/image`;
-    };
+            const matchesStatus =
+                statusFilter === "ALL" ||
+                (statusFilter === "AVAILABLE" && product.productAvailable) ||
+                (statusFilter === "UNAVAILABLE" && !product.productAvailable) ||
+                (statusFilter === "LOW_STOCK" && product.stockQuantity > 0 && product.stockQuantity <= 5);
 
+            return matchesSearch && matchesStatus;
+        });
+    }, [products, search, statusFilter]);
 
     if (loading) {
-
         return (
-
-            <div
-                className="container text-center"
-                style={{
-                    marginTop: "120px"
-                }}
-            >
-
-                <h3>
-                    Loading your products...
-                </h3>
-
+            <div className="admin-customers-page">
+                <div className="customer-loading">Loading products...</div>
             </div>
         );
     }
 
-
     return (
-
-        <div
-            className="container"
-            style={{
-                marginTop: "100px",
-                marginBottom: "50px"
-            }}
-        >
-
-            <div
-                className="d-flex justify-content-between align-items-center mb-4"
-            >
-
+        <div className="admin-customers-page">
+            {/* Header */}
+            <div className="customers-header">
                 <div>
-
-                    <h2>
-                        My Products
-                    </h2>
-
-                    <p className="text-muted">
-                        Manage products listed by your shop.
-                    </p>
-
+                    <h1>Manage Products</h1>
+                    <p>Manage all products listed by your shop.</p>
                 </div>
 
-
-                <Link
-                    to="/vendor/products/add"
-                    className="btn btn-primary"
-                >
-                    + Add Product
-                </Link>
-
+                <Link to="/vendor/products/add" className="customer-add-button" style={{ textDecoration: "none" }}>+ Add Product</Link>
             </div>
 
+            {/* Error */}
+            {error && <div className="customer-error">{error}</div>}
 
-            {error && (
+            {/* Toolbar */}
+            <div className="customer-toolbar">
+                <input type="text" placeholder="Search product, brand, category..." value={search} onChange={e => setSearch(e.target.value)} />
 
-                <div className="alert alert-danger">
-                    {error}
-                </div>
+                <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="admin-filter-select">
+                    <option value="ALL">All Products</option>
+                    <option value="AVAILABLE">Available</option>
+                    <option value="UNAVAILABLE">Unavailable</option>
+                    <option value="LOW_STOCK">Low Stock</option>
+                </select>
 
-            )}
+                <span>{filteredProducts.length} products</span>
+            </div>
 
+            {/* Products Table */}
+            <div className="customer-table-container">
+                <table className="customer-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Product</th>
+                            <th>Brand</th>
+                            <th>Category</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
 
-            {!error &&
-                products.length === 0 && (
+                    <tbody>
+                        {filteredProducts.length === 0 ? (
+                            <tr>
+                                <td colSpan={8} className="empty-customers">No products found.</td>
+                            </tr>
+                        ) : (
+                            filteredProducts.map(product => (
+                                <tr key={product.id}>
+                                    <td>#{product.id}</td>
+                                    <td><strong>{product.name}</strong></td>
+                                    <td>{product.brand || "-"}</td>
+                                    <td>{product.categoryName || "-"}</td>
+                                    <td><strong>₹{Number(product.price).toLocaleString("en-IN")}</strong></td>
 
-                    <div
-                        className="text-center border rounded p-5"
-                    >
+                                    <td>
+                                        <span style={{
+                                            fontWeight: product.stockQuantity <= 5 ? 700 : 400,
+                                            color: product.stockQuantity <= 0 ? "#dc2626" : product.stockQuantity <= 5 ? "#d97706" : "#374151"
+                                        }}>
+                                            {product.stockQuantity}
+                                        </span>
+                                    </td>
 
-                        <h4>
-                            No products yet
-                        </h4>
-
-                        <p className="text-muted">
-                            Add your first product to
-                            start selling.
-                        </p>
-
-                        <Link
-                            to="/vendor/products/add"
-                            className="btn btn-primary"
-                        >
-                            Add Product
-                        </Link>
-
-                    </div>
-
-                )}
-
-
-            {products.length > 0 && (
-
-                <div className="row g-4">
-
-                    {products.map(product => (
-
-                        <div
-                            className="col-md-6 col-lg-4"
-                            key={product.id}
-                        >
-
-                            <div
-                                className="card h-100 shadow-sm"
-                            >
-
-
-                                {/* IMAGE */}
-
-                                <img
-                                    src={
-                                        getImageUrl(
-                                            product.id
-                                        )
-                                    }
-                                    className="card-img-top"
-                                    alt={
-                                        product.name
-                                    }
-                                    style={{
-                                        height:
-                                            "220px",
-                                        objectFit:
-                                            "contain",
-                                        padding:
-                                            "15px"
-                                    }}
-                                />
-
-
-                                <div
-                                    className="card-body"
-                                >
-
-                                    <h5
-                                        className="card-title"
-                                    >
-                                        {product.name}
-                                    </h5>
-
-
-                                    <p
-                                        className="text-muted mb-1"
-                                    >
-                                        {product.brand}
-                                    </p>
-
-
-                                    <h5
-                                        className="text-primary"
-                                    >
-                                        ₹
-                                        {Number(
-                                            product.price
-                                        ).toLocaleString(
-                                            "en-IN"
+                                    <td>
+                                        {product.productAvailable && product.stockQuantity > 0 ? (
+                                            <span className="customer-status active">Available</span>
+                                        ) : (
+                                            <span className="customer-status disabled">Unavailable</span>
                                         )}
-                                    </h5>
+                                    </td>
 
-
-                                    <p className="mb-1">
-
-                                        Stock:{" "}
-
-                                        <strong>
-                                            {
-                                                product.stockQuantity
-                                            }
-                                        </strong>
-
-                                    </p>
-
-
-                                    <p>
-
-                                        Status:{" "}
-
-                                        <strong
-                                            className={
-                                                product.productAvailable
-                                                    ? "text-success"
-                                                    : "text-danger"
-                                            }
-                                        >
-                                            {product.productAvailable
-                                                ? "Available"
-                                                : "Unavailable"}
-                                        </strong>
-
-                                    </p>
-
-
-                                    {/* ACTIONS */}
-
-                                    <div
-                                        className="d-flex gap-2"
-                                    >
-
-                                        <button
-                                            className="btn btn-outline-primary btn-sm"
-                                            onClick={() =>
-                                                navigate(
-                                                    `/vendor/products/edit/${product.id}`
-                                                )
-                                            }
-                                        >
-                                            Edit
-                                        </button>
-
-
-                                        <button
-                                            className="btn btn-outline-danger btn-sm"
-                                            onClick={() =>
-                                                handleDelete(
-                                                    product.id
-                                                )
-                                            }
-                                        >
-                                            Delete
-                                        </button>
-
-                                    </div>
-
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    ))}
-
-                </div>
-
-            )}
-
+                                    <td>
+                                        <div className="customer-actions">
+                                            <button type="button" onClick={() => navigate(`/product/${product.id}`)}>View</button>
+                                            <button type="button" onClick={() => navigate(`/vendor/products/edit/${product.id}`)}>Edit</button>
+                                            <button type="button" onClick={() => handleDelete(product.id)} style={{ color: "#dc2626" }}>Delete</button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
     );
 };

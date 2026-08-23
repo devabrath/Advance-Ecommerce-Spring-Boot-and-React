@@ -1,12 +1,8 @@
 import { useState } from "react";
-import {
-    Link,
-    useNavigate
-} from "react-router-dom";
-
+import { Link, useNavigate } from "react-router-dom";
+import { Alert, Button, Card, Form, Spinner } from "react-bootstrap";
 import API from "../axios";
 import { useAuth } from "../Context/AuthContext";
-
 
 interface AuthResponse {
     token: string;
@@ -17,202 +13,124 @@ interface AuthResponse {
 }
 
 const Login = () => {
-
     const navigate = useNavigate();
-
     const { login } = useAuth();
-    
 
-    const [email, setEmail] =
-        useState<string>("");
-
-    const [password, setPassword] =
-        useState<string>("");
-
-    const [error, setError] =
-        useState<string>("");
-
-    const [loading, setLoading] =
-        useState<boolean>(false);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
 
     const handleSubmit = async (
         e: React.FormEvent<HTMLFormElement>
-    ): Promise<void> => {
-
+    ) => {
         e.preventDefault();
-
         setError("");
         setLoading(true);
 
         try {
-
-            // const response =
-            //     await API.post<AuthResponse>(
-            //         "/auth/login",
-            //         {
-            //             email,
-            //             password
-            //         }
-            //     );
-
-            // const authData =
-            //     response.data;
-
-            // // login(authData);
-            // localStorage.setItem(
-            //     "token",
-            //     authData.token
-            // );
-
-            //     localStorage.setItem(
-            //         "user",
-            //         JSON.stringify(authData)
-            //     );
-
-            //         API.defaults.headers.common[
-            //             "Authorization"
-            //         ] = `Bearer ${authData.token}`;
-                    const response = await API.post(
-            "/auth/login",
-            {
-                email,
-                password
-            }
-        );
-
-        const authData = response.data;
-
-        login(authData);
-
-        // navigate("/");
-
-                                if (authData.role === "ADMIN") {
-
-                                    navigate("/admin/dashboard");
-
-                                } else if (
-                                    authData.role === "VENDOR"
-                                ) {
-
-                                    navigate("/vendor/dashboard");
-
-                                } else {
-
-                                    navigate("/");
-                                }
-
-        } catch (error: any) {
-
-            console.error(
-                "Login error:",
-                error
+            const { data } = await API.post<AuthResponse>(
+                "/auth/login",
+                { email, password }
             );
 
+            login(data);
+
+            if (data.role === "ADMIN") {
+                navigate("/admin/dashboard");
+            } else if (data.role === "VENDOR") {
+                navigate("/vendor/dashboard");
+            } else {
+                navigate("/");
+            }
+        } catch (error: any) {
             setError(
                 error.response?.data ||
-                "Invalid email or password"
+                "Invalid email or password."
             );
-
         } finally {
-
             setLoading(false);
         }
     };
 
     return (
-        <div
-            className="container"
-            style={{
-                marginTop: "100px",
-                maxWidth: "500px"
-            }}
-        >
+        <main className="auth-page">
+            <div className="auth-wrapper">
+                <Card className="auth-card border-0 shadow" style={{width:"auto"}}>
+                    <Card.Body className="auth-card-body">
+                        <div className="auth-header">
+                            <div className="auth-icon">🛍️</div>
+                            <h2>Welcome Back</h2>
+                            <p>Sign in to continue shopping</p>
+                        </div>
 
-            <div className="card shadow p-4"style={{
-                width: "auto",
-            }}>
+                        {error && (
+                            <Alert
+                                variant="danger"
+                                className="auth-error"
+                            >
+                                {error}
+                            </Alert>
+                        )}
 
-                <h2 className="text-center mb-4">
-                    Login
-                </h2>
+                        <Form onSubmit={handleSubmit}>
+                            <Form.Group className="mb-3">
+                                <Form.Label>Email Address</Form.Label>
 
-                {error && (
-                    <div className="alert alert-danger">
-                        {error}
-                    </div>
-                )}
+                                <Form.Control
+                                    type="email"
+                                    value={email}
+                                    onChange={e =>
+                                        setEmail(e.target.value)
+                                    }
+                                    placeholder="Enter your email"
+                                    required
+                                />
+                            </Form.Group>
 
-                <form
-                    onSubmit={handleSubmit}
-                >
+                            <Form.Group className="mb-4">
+                                <Form.Label>Password</Form.Label>
 
-                    <div className="mb-3">
+                                <Form.Control
+                                    type="password"
+                                    value={password}
+                                    onChange={e =>
+                                        setPassword(e.target.value)
+                                    }
+                                    placeholder="Enter your password"
+                                    required
+                                />
+                            </Form.Group>
 
-                        <label className="form-label">
-                            Email
-                        </label>
+                            <Button
+                                type="submit"
+                                className="auth-submit w-100"
+                                disabled={loading}
+                            >
+                                {loading ? (
+                                    <>
+                                        <Spinner
+                                            animation="border"
+                                            size="sm"
+                                        />
+                                        <span>Logging in...</span>
+                                    </>
+                                ) : (
+                                    "Login"
+                                )}
+                            </Button>
+                        </Form>
 
-                        <input
-                            type="email"
-                            className="form-control"
-                            value={email}
-                            onChange={(e) =>
-                                setEmail(
-                                    e.target.value
-                                )
-                            }
-                            placeholder="Enter your email"
-                            required
-                        />
-
-                    </div>
-
-                    <div className="mb-3">
-
-                        <label className="form-label">
-                            Password
-                        </label>
-
-                        <input
-                            type="password"
-                            className="form-control"
-                            value={password}
-                            onChange={(e) =>
-                                setPassword(
-                                    e.target.value
-                                )
-                            }
-                            placeholder="Enter your password"
-                            required
-                        />
-
-                    </div>
-
-                    <button
-                        type="submit"
-                        className="btn btn-primary w-100"
-                        disabled={loading}
-                    >
-                        {loading
-                            ? "Logging in..."
-                            : "Login"}
-                    </button>
-
-                </form>
-
-                <p className="text-center mt-3">
-
-                    Don't have an account?{" "}
-
-                    <Link to="/register">
-                        Register
-                    </Link>
-
-                </p>
-
+                        <p className="auth-footer">
+                            Don't have an account?{" "}
+                            <Link to="/register">
+                                Create Account
+                            </Link>
+                        </p>
+                    </Card.Body>
+                </Card>
             </div>
-
-        </div>
+        </main>
     );
 };
 

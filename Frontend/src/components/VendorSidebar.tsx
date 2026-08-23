@@ -2,37 +2,92 @@ import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../Context/AuthContext";
 
-const VendorSidebar = () => {
+interface Props {
+    darkMode: boolean;
+    setDarkMode: (value: boolean) => void;
+}
+
+const VendorSidebar = ({
+    darkMode,
+    setDarkMode
+}: Props) => {
+
+    // Router
     const navigate = useNavigate();
+
+    // Authentication
     const { user, logout } = useAuth();
 
+    // Logout user
     const handleLogout = () => {
         logout();
         navigate("/login");
     };
 
+    // Navigation link style
+    const linkStyle = ({
+        isActive
+    }: {
+        isActive: boolean
+    }) => ({
+        display: "block",
+        padding: "11px 15px",
+        marginBottom: "5px",
+        borderRadius: "8px",
+        textDecoration: "none",
+
+        color: isActive
+            ? "#2563eb"
+            : darkMode
+                ? "#d1d5db"
+                : "#374151",
+
+        backgroundColor: isActive
+            ? darkMode
+                ? "#172554"
+                : "#eff6ff"
+            : "transparent",
+
+        fontWeight: isActive
+            ? "600"
+            : "400",
+
+        fontSize: "14px"
+    });
+
     return (
         <aside
             style={{
                 width: "250px",
-                minHeight: "100vh",
+                height: "100vh",
                 position: "fixed",
                 left: 0,
                 top: 0,
-                backgroundColor: "#ffffff",
-                borderRight: "1px solid #e5e7eb",
+
+                backgroundColor: darkMode
+                    ? "#111827"
+                    : "#ffffff",
+
+                borderRight: darkMode
+                    ? "1px solid #1f2937"
+                    : "1px solid #e5e7eb",
+
                 display: "flex",
                 flexDirection: "column",
                 zIndex: 1000
             }}
         >
 
-            {/* LOGO */}
-
+            {/* Logo */}
             <div
                 style={{
-                    padding: "24px 20px",
-                    borderBottom: "1px solid #e5e7eb"
+                    padding: "18px 20px",
+
+                    borderBottom: darkMode
+                        ? "1px solid #1f2937"
+                        : "1px solid #e5e7eb",
+
+                    flexShrink: 0
                 }}
             >
                 <h3
@@ -47,25 +102,35 @@ const VendorSidebar = () => {
 
                 <small
                     style={{
-                        color: "#6b7280"
+                        color: darkMode
+                            ? "#9ca3af"
+                            : "#6b7280"
                     }}
                 >
                     Vendor Panel
                 </small>
             </div>
 
-
-            {/* VENDOR INFO */}
-
+            {/* Vendor info */}
             <div
                 style={{
-                    padding: "20px",
-                    borderBottom: "1px solid #e5e7eb"
+                    padding: "14px 20px",
+
+                    borderBottom: darkMode
+                        ? "1px solid #1f2937"
+                        : "1px solid #e5e7eb",
+
+                    flexShrink: 0
                 }}
             >
                 <div
                     style={{
-                        fontWeight: "600"
+                        fontWeight: "600",
+                        fontSize: "14px",
+
+                        color: darkMode
+                            ? "#f9fafb"
+                            : "#111827"
                     }}
                 >
                     Hello, {user?.firstName}
@@ -73,149 +138,114 @@ const VendorSidebar = () => {
 
                 <small
                     style={{
-                        color: "#6b7280"
+                        color: darkMode
+                            ? "#9ca3af"
+                            : "#6b7280"
                     }}
                 >
                     Vendor
                 </small>
             </div>
 
-
-            {/* NAVIGATION */}
-
+            {/* Navigation */}
             <nav
                 style={{
                     padding: "15px 10px",
-                    flex: 1
+                    flex: 1,
+                    overflowY: "auto",
+                    minHeight: 0
                 }}
             >
-
                 <NavLink
                     to="/vendor/dashboard"
-                    style={({ isActive }) => ({
-                        display: "block",
-                        padding: "12px 15px",
-                        marginBottom: "5px",
-                        borderRadius: "8px",
-                        textDecoration: "none",
-                        color: isActive
-                            ? "#2563eb"
-                            : "#374151",
-                        backgroundColor: isActive
-                            ? "#eff6ff"
-                            : "transparent",
-                        fontWeight: isActive
-                            ? "600"
-                            : "400"
-                    })}
+                    style={linkStyle}
                 >
                     🏠 Dashboard
                 </NavLink>
 
+                <NavLink
+                    to="/vendor/revenue"
+                    style={linkStyle}
+                >
+                    💰 Revenue
+                </NavLink>
 
                 <NavLink
                     to="/vendor/products"
-                    style={({ isActive }) => ({
-                        display: "block",
-                        padding: "12px 15px",
-                        marginBottom: "5px",
-                        borderRadius: "8px",
-                        textDecoration: "none",
-                        color: isActive
-                            ? "#2563eb"
-                            : "#374151",
-                        backgroundColor: isActive
-                            ? "#eff6ff"
-                            : "transparent",
-                        fontWeight: isActive
-                            ? "600"
-                            : "400"
-                    })}
+                    style={linkStyle}
                 >
-                    📦 My Products
+                    📦 Manage Products
                 </NavLink>
-
-
-                <NavLink
-                    to="/vendor/products/add"
-                    style={({ isActive }) => ({
-                        display: "block",
-                        padding: "12px 15px",
-                        marginBottom: "5px",
-                        borderRadius: "8px",
-                        textDecoration: "none",
-                        color: isActive
-                            ? "#2563eb"
-                            : "#374151",
-                        backgroundColor: isActive
-                            ? "#eff6ff"
-                            : "transparent",
-                        fontWeight: isActive
-                            ? "600"
-                            : "400"
-                    })}
-                >
-                    ➕ Add Product
-                </NavLink>
-
 
                 <NavLink
                     to="/vendor/orders"
-                    style={({ isActive }) => ({
-                        display: "block",
-                        padding: "12px 15px",
-                        marginBottom: "5px",
-                        borderRadius: "8px",
-                        textDecoration: "none",
-                        color: isActive
-                            ? "#2563eb"
-                            : "#374151",
-                        backgroundColor: isActive
-                            ? "#eff6ff"
-                            : "transparent",
-                        fontWeight: isActive
-                            ? "600"
-                            : "400"
-                    })}
+                    style={linkStyle}
                 >
-                    🛒 Orders
+                    🛒 Manage Orders
                 </NavLink>
-
 
                 <NavLink
                     to="/vendor/profile"
-                    style={({ isActive }) => ({
-                        display: "block",
-                        padding: "12px 15px",
-                        marginBottom: "5px",
-                        borderRadius: "8px",
-                        textDecoration: "none",
-                        color: isActive
-                            ? "#2563eb"
-                            : "#374151",
-                        backgroundColor: isActive
-                            ? "#eff6ff"
-                            : "transparent",
-                        fontWeight: isActive
-                            ? "600"
-                            : "400"
-                    })}
+                    style={linkStyle}
                 >
                     👤 Profile
                 </NavLink>
-
             </nav>
 
-
-            {/* LOGOUT */}
-
+            {/* Theme toggle */}
             <div
                 style={{
-                    padding: "15px 10px",
-                    borderTop: "1px solid #e5e7eb"
+                    padding: "10px",
+
+                    borderTop: darkMode
+                        ? "1px solid #1f2937"
+                        : "1px solid #e5e7eb",
+
+                    flexShrink: 0
                 }}
             >
+                <button
+                    type="button"
+                    onClick={() =>
+                        setDarkMode(!darkMode)
+                    }
+                    style={{
+                        width: "100%",
+                        border: "none",
 
+                        background: darkMode
+                            ? "#1f2937"
+                            : "#f3f4f6",
+
+                        color: darkMode
+                            ? "#f9fafb"
+                            : "#374151",
+
+                        textAlign: "left",
+                        padding: "10px 15px",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        fontSize: "14px"
+                    }}
+                >
+                    {darkMode
+                        ? "☀️ Light Mode"
+                        : "🌙 Dark Mode"}
+                </button>
+            </div>
+
+            {/* Logout */}
+            <div
+                style={{
+                    padding: "10px",
+
+                    borderTop: darkMode
+                        ? "1px solid #1f2937"
+                        : "1px solid #e5e7eb",
+
+                    flexShrink: 0
+                }}
+            >
                 <button
                     type="button"
                     onClick={handleLogout}
@@ -224,16 +254,15 @@ const VendorSidebar = () => {
                         border: "none",
                         background: "transparent",
                         textAlign: "left",
-                        padding: "12px 15px",
+                        padding: "10px 15px",
                         borderRadius: "8px",
                         color: "#dc2626",
                         cursor: "pointer",
-                        fontSize: "15px"
+                        fontSize: "14px"
                     }}
                 >
                     🚪 Logout
                 </button>
-
             </div>
 
         </aside>

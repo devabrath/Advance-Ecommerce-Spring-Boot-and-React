@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Alert, Badge, Button, Card, Spinner } from "react-bootstrap";
 import { useNavigate, useParams } from "react-router-dom";
 import API from "../axios";
+import { Alert, Spinner } from "react-bootstrap";
 
+// Types
 interface OrderItem {
     productId: number;
     productName: string;
@@ -28,386 +29,241 @@ interface Order {
 }
 
 const OrderDetails: React.FC = () => {
-
     const { id } = useParams();
     const navigate = useNavigate();
 
-    const [order, setOrder] =
-        useState<Order | null>(null);
+    const [order, setOrder] = useState<Order | null>(null);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [error, setError] = useState<string>("");
 
-    const [loading, setLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState("");
-
-
+    // Fetch order
     useEffect(() => {
-
-        const fetchOrder = async () => {
+        const fetchOrder = async (): Promise<void> => {
+            if (!id) {
+                setError("Order ID not found.");
+                setLoading(false);
+                return;
+            }
 
             try {
-
                 setLoading(true);
+                setError("");
 
-                const response =
-                    await API.get<Order>(
-                        `/customer/orders/${id}`
-                    );
-
-                console.log(
-                    "ORDER DETAILS:",
-                    response.data
-                );
-
+                const response = await API.get<Order>(`/customer/orders/${id}`);
+                console.log("ORDER DETAILS:", response.data);
                 setOrder(response.data);
-
-            } catch (error: any) {
-
-                console.error(
-                    "Error loading order:",
-                    error
-                );
-
-                console.error(
-                    "STATUS:",
-                    error?.response?.status
-                );
-
-                console.error(
-                    "DATA:",
-                    error?.response?.data
-                );
+            } catch (fetchError: any) {
+                console.error("Error loading order:", fetchError);
 
                 setError(
-                    error?.response?.data ||
+                    fetchError?.response?.data?.message ||
+                    fetchError?.response?.data ||
                     "Unable to load order details."
                 );
-
             } finally {
-
                 setLoading(false);
-
             }
         };
 
-        if (id) {
-            fetchOrder();
-        }
-
+        fetchOrder();
     }, [id]);
 
-
-    const getStatusVariant = (
-        status: string
-    ) => {
-
+    // Status helpers
+    const getOrderStatusClass = (status: string): string => {
         switch (status) {
-
             case "PLACED":
-                return "primary";
-
+                return "order-status-placed";
             case "CONFIRMED":
-                return "info";
-
+                return "order-status-confirmed";
             case "SHIPPED":
-                return "warning";
-
+                return "order-status-shipped";
             case "DELIVERED":
-                return "success";
-
+                return "order-status-delivered";
             case "CANCELLED":
-                return "danger";
-
+                return "order-status-cancelled";
             default:
-                return "secondary";
+                return "order-status-default";
         }
     };
 
+    const getPaymentStatusClass = (status: string): string => {
+        switch (status) {
+            case "SUCCESS":
+                return "payment-status-success";
+            case "PENDING":
+                return "payment-status-pending";
+            case "FAILED":
+                return "payment-status-failed";
+            default:
+                return "payment-status-default";
+        }
+    };
 
+    // Loading
     if (loading) {
-
         return (
-            <div
-                style={{
-                    paddingTop: "8rem",
-                    textAlign: "center"
-                }}
-            >
-                <Spinner animation="border" />
-
-                <p className="mt-3">
-                    Loading order...
-                </p>
+            <div className="order-details-page">
+                <div className="order-page-loader">
+                    <Spinner animation="border" />
+                    <p>Loading your order...</p>
+                </div>
             </div>
         );
     }
 
-
+    // Error
     if (error || !order) {
-
         return (
-            <div
-                style={{
-                    paddingTop: "8rem",
-                    maxWidth: "900px",
-                    margin: "auto"
-                }}
-            >
-
-                <Alert variant="danger">
-                    {error || "Order not found."}
-                </Alert>
-
-                <Button
-                    onClick={() =>
-                        navigate("/orders")
-                    }
-                >
-                    Back to My Orders
-                </Button>
-
+            <div className="order-details-page">
+                <div className="order-details-error">
+                    <Alert variant="danger">{error || "Order not found."}</Alert>
+                    <button type="button" className="order-back-button" onClick={() => navigate("/orders")}>
+                        ← Back to My Orders
+                    </button>
+                </div>
             </div>
         );
     }
-
 
     return (
+        <div className="order-details-page">
+            <div className="order-details-wrapper">
+                {/* Back */}
+                <button type="button" className="order-details-back" onClick={() => navigate("/orders")}>
+                    ← Back to My Orders
+                </button>
 
-        <div
-            style={{
-                paddingTop: "7rem",
-                paddingBottom: "4rem",
-                maxWidth: "1000px",
-                margin: "auto",
-                paddingLeft: "20px",
-                paddingRight: "20px"
-            }}
-        >
+                {/* Header */}
+                <div className="order-details-header">
+                    <div>
+                        <span className="order-details-eyebrow">ORDER DETAILS</span>
+                        <h1>Order #{order.orderId}</h1>
+                        <p>Placed on {new Date(order.createdAt).toLocaleString("en-IN")}</p>
+                    </div>
 
-            {/* HEADER */}
-
-            <div
-                className="d-flex justify-content-between align-items-center mb-4"
-            >
-
-                <div>
-
-                    <h2>
-                        Order #{order.orderId}
-                    </h2>
-
-                    <small className="text-muted">
-                        Placed on{" "}
-                        {new Date(
-                            order.createdAt
-                        ).toLocaleString()}
-                    </small>
-
+                    <span className={`order-status-badge ${getOrderStatusClass(order.orderStatus)}`}>
+                        {order.orderStatus}
+                    </span>
                 </div>
 
-                <Badge
-                    bg={getStatusVariant(
-                        order.orderStatus
-                    )}
-                    style={{
-                        fontSize: "1rem",
-                        padding: "10px 15px"
-                    }}
-                >
-                    {order.orderStatus}
-                </Badge>
-
-            </div>
-
-
-            {/* ORDER STATUS */}
-
-            <Card className="mb-4 shadow-sm" style={{width : "Auto"}}>
-
-                <Card.Body>
-
-                    <h5>
-                        Order Status
-                    </h5>
-
-                    <div
-                        className="d-flex justify-content-between mt-3"
-                    >
-
-                        <span>
-                            Order Status
-                        </span>
-
-                        <Badge
-                            bg={getStatusVariant(
-                                order.orderStatus
-                            )}
-                        >
-                            {order.orderStatus}
-                        </Badge>
-
+                {/* Order summary */}
+                <div className="order-summary-grid">
+                    <div className="order-summary-card">
+                        <div className="order-summary-icon">📦</div>
+                        <div>
+                            <span>Order Status</span>
+                            <strong>{order.orderStatus}</strong>
+                        </div>
                     </div>
 
-                    <div
-                        className="d-flex justify-content-between mt-3"
-                    >
-
-                        <span>
-                            Payment Status
-                        </span>
-
-                        <Badge
-                            bg={
-                                order.paymentStatus ===
-                                "SUCCESS"
-                                    ? "success"
-                                    : "secondary"
-                            }
-                        >
-                            {order.paymentStatus}
-                        </Badge>
-
+                    <div className="order-summary-card">
+                        <div className="order-summary-icon">💳</div>
+                        <div>
+                            <span>Payment Status</span>
+                            <strong className={getPaymentStatusClass(order.paymentStatus)}>
+                                {order.paymentStatus}
+                            </strong>
+                        </div>
                     </div>
 
-                </Card.Body>
+                    <div className="order-summary-card">
+                        <div className="order-summary-icon">₹</div>
+                        <div>
+                            <span>Total Amount</span>
+                            <strong>
+                                ₹{Number(order.totalAmount).toLocaleString("en-IN", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                })}
+                            </strong>
+                        </div>
+                    </div>
+                </div>
 
-            </Card>
+                {/* Main content */}
+                <div className="order-details-grid">
+                    {/* Ordered items */}
+                    <div className="order-details-card">
+                        <div className="order-card-header">
+                            <div>
+                                <h2>Ordered Items</h2>
+                                <p>{order.items.length} {order.items.length === 1 ? "item" : "items"} in this order</p>
+                            </div>
+                        </div>
 
+                        <div className="order-items-list">
+                            {order.items.map(item => (
+                                <div key={item.productId} className="order-item-row">
+                                    <div className="order-item-main">
+                                        <div className="order-item-placeholder">🛍️</div>
 
-            {/* ITEMS */}
-
-            <Card className="mb-4 shadow-sm " style={{width : "Auto"}}>
-
-                <Card.Body>
-
-                    <h5 className="mb-3">
-                        Ordered Items
-                    </h5>
-
-                    {order.items.map(
-                        (item) => (
-
-                            <div
-                                key={item.productId}
-                                className="border-bottom py-3"
-                            >
-
-                                <div
-                                    className="d-flex justify-content-between"
-                                >
-
-                                    <div>
-
-                                        <h6>
-                                            {
-                                                item.productName
-                                            }
-                                        </h6>
-
-                                        <div className="text-muted">
-                                            ₹
-                                            {Number(
-                                                item.unitPrice
-                                            ).toFixed(2)}
-                                            {" "}×{" "}
-                                            {
-                                                item.quantity
-                                            }
+                                        <div>
+                                            <h3>{item.productName}</h3>
+                                            <p>₹{Number(item.unitPrice).toLocaleString("en-IN")} × {item.quantity}</p>
                                         </div>
-
                                     </div>
 
-                                    <strong>
-                                        ₹
-                                        {Number(
-                                            item.totalPrice
-                                        ).toFixed(2)}
+                                    <strong className="order-item-price">
+                                        ₹{Number(item.totalPrice).toLocaleString("en-IN", {
+                                            minimumFractionDigits: 2,
+                                            maximumFractionDigits: 2
+                                        })}
                                     </strong>
-
                                 </div>
+                            ))}
+                        </div>
 
-                            </div>
-
-                        )
-                    )}
-
-                    <div
-                        className="d-flex justify-content-between mt-4"
-                    >
-
-                        <h5>
-                            Total
-                        </h5>
-
-                        <h5>
-                            ₹
-                            {Number(
-                                order.totalAmount
-                            ).toFixed(2)}
-                        </h5>
-
+                        {/* Total */}
+                        <div className="order-total-row">
+                            <span>Order Total</span>
+                            <strong>
+                                ₹{Number(order.totalAmount).toLocaleString("en-IN", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                })}
+                            </strong>
+                        </div>
                     </div>
 
-                </Card.Body>
+                    {/* Delivery address */}
+                    <div className="order-details-card order-address-card">
+                        <div className="order-card-header">
+                            <div>
+                                <h2>Delivery Address</h2>
+                                <p>Where your order will be delivered</p>
+                            </div>
+                        </div>
 
-            </Card>
+                        <div className="order-address-content">
+                            <div className="order-address-avatar">
+                                {order.shippingFullName?.charAt(0)?.toUpperCase()}
+                            </div>
 
+                            <div className="order-address-details">
+                                <h3>{order.shippingFullName}</h3>
+                                <p>{order.shippingAddressLine}</p>
+                                <p>{order.shippingCity}, {order.shippingState} - {order.shippingPostalCode}</p>
 
-            {/* DELIVERY ADDRESS */}
+                                {order.shippingLandmark && (
+                                    <p className="order-landmark">Landmark: {order.shippingLandmark}</p>
+                                )}
 
-            <Card className="mb-4 shadow-sm" style={{width : "Auto"}}>
+                                <div className="order-phone">
+                                    <span>📞</span>
+                                    {order.shippingPhone}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                <Card.Body>
-
-                    <h5 className="mb-3">
-                        Delivery Address
-                    </h5>
-
-                    <strong>
-                        {order.shippingFullName}
-                    </strong>
-
-                    <br />
-
-                    {order.shippingAddressLine}
-
-                    <br />
-
-                    {order.shippingCity},{" "}
-                    {order.shippingState} -{" "}
-                    {order.shippingPostalCode}
-
-                    <br />
-
-                    Phone:{" "}
-                    {order.shippingPhone}
-
-                    {order.shippingLandmark && (
-                        <>
-                            <br />
-
-                            Landmark:{" "}
-                            {order.shippingLandmark}
-                        </>
-                    )}
-
-                </Card.Body>
-
-            </Card>
-
-
-            {/* BACK BUTTON */}
-
-            <Button
-                variant="secondary"
-                onClick={() =>
-                    navigate("/orders")
-                }
-            >
-                ← Back to My Orders
-            </Button>
-
+                {/* Bottom action */}
+                <div className="order-details-footer">
+                    <button type="button" className="order-back-button" onClick={() => navigate("/orders")}>
+                        ← Back to My Orders
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };

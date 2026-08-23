@@ -1,645 +1,315 @@
-import React, {
-    useContext,
-    useEffect,
-    useState
-} from "react";
-import AppContext, {
-    type CartItem
-} from "../Context/Context";
+import React, { useContext, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import AppContext, { type CartItem } from "../Context/Context";
 import API from "../axios";
 import CheckoutPopup from "./CheckoutPopup";
-import { Button } from "react-bootstrap";
+import unplugged from "../assets/test.jpg";
 
-interface CartItemWithImage extends CartItem {
-    imageUrl: string;
+interface CartItemWithImage extends CartItem { imageUrl: string; }
+type PaymentMethod = "UPI" | "COD";
+
+declare global {
+    interface Window { Razorpay: any; }
 }
 
-const Cart: React.FC = () => {
+const loadRazorpayScript = (): Promise<boolean> => {
+    return new Promise(resolve => {
+        if (window.Razorpay) { resolve(true); return; }
 
-    const context = useContext(AppContext);
-
-    if (!context) {
-        throw new Error(
-            "Cart must be used inside AppProvider"
-        );
-    }
-
-    const {
-    cart,
-    removeFromCart,
-    clearCart,
-    updateCartQuantity,
-    refreshCart
-} = useContext(AppContext);
-
-    const [
-        cartItems,
-        setCartItems
-    ] = useState<CartItemWithImage[]>([]);
-
-    const [
-        totalPrice,
-        setTotalPrice
-    ] = useState<number>(0);
-
-    const [
-        cartImage,
-        setCartImage
-    ] = useState<File | null>(null);
-
-    const [
-        showModal,
-        setShowModal
-    ] = useState<boolean>(false);
-
-    useEffect(() => {
-
-        const fetchImagesAndUpdateCart =
-            async (): Promise<void> => {
-
-                console.log("Cart", cart);
-
-                try {
-
-                    const response =
-                        await API.get<CartItem[]>(
-                            "/products"
-                        );
-
-                    const backendProductIds =
-                        response.data.map(
-                            (product) =>
-                                product.id
-                        );
-
-                    const updatedCartItems =
-                        cart.filter(
-                            (item) =>
-                                backendProductIds.includes(
-                                    item.id
-                                )
-                        );
-
-                    const cartItemsWithImages =
-                        await Promise.all(
-
-                            updatedCartItems.map(
-                                async (item) => {
-
-                                    try {
-
-                                        const imageResponse =
-                                            await API.get(
-                                                `/product/${item.id}/image`,
-                                                {
-                                                    responseType:
-                                                        "blob"
-                                                }
-                                            );
-
-                                        const imageFile =
-                                            await convertUrlToFile(
-                                                imageResponse.data,
-                                                item.imageName ||
-                                                    `product-${item.id}.jpg`
-                                            );
-
-                                        setCartImage(
-                                            imageFile
-                                        );
-
-                                        const imageUrl =
-                                            URL.createObjectURL(
-                                                imageResponse.data
-                                            );
-
-                                        return {
-                                            ...item,
-                                            imageUrl
-                                        };
-
-                                    } catch (error) {
-
-                                        console.error(
-                                            "Error fetching image:",
-                                            error
-                                        );
-
-                                        return {
-                                            ...item,
-                                            imageUrl:
-                                                ""
-                                        };
-                                    }
-                                }
-                            )
-                        );
-
-                    setCartItems(
-                        cartItemsWithImages
-                    );
-
-                } catch (error) {
-
-                    console.error(
-                        "Error fetching product data:",
-                        error
-                    );
-                }
-            };
-
-        if (cart.length > 0) {
-
-            fetchImagesAndUpdateCart();
-
-        } else {
-
-            setCartItems([]);
+        const existingScript = document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]');
+        if (existingScript) {
+            existingScript.addEventListener("load", () => resolve(true));
+            existingScript.addEventListener("error", () => resolve(false));
+            return;
         }
 
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.async = true;
+        script.onload = () => { resolve(true); };
+        script.onerror = () => { resolve(false); };
+        document.body.appendChild(script);
+    });
+};
+
+const Cart: React.FC = () => {
+    const navigate = useNavigate();
+    const context = useContext(AppContext);
+
+    if (!context) throw new Error("Cart must be used inside AppProvider");
+
+    const { cart, removeFromCart, clearCart, updateCartQuantity, refreshCart } = context;
+    const [cartItems, setCartItems] = useState<CartItemWithImage[]>([]);
+    const [totalPrice, setTotalPrice] = useState<number>(0);
+    const [showModal, setShowModal] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(true);
+    const [updatingItem, setUpdatingItem] = useState<number | null>(null);
+    const [removingItem, setRemovingItem] = useState<number | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        const imageUrls: string[] = [];
+
+        const fetchImagesAndUpdateCart = async () => {
+            setLoading(true);
+
+            if (cart.length === 0) {
+                if (!cancelled) { setCartItems([]); setLoading(false); }
+                return;
+            }
+
+            try {
+                const cartItemsWithImages = await Promise.all(cart.map(async item => {
+                    try {
+                        const imageResponse = await API.get(`/product/${item.id}/image`, { responseType: "blob" });
+
+                        if (cancelled) return { ...item, imageUrl: unplugged };
+
+                        const imageUrl = URL.createObjectURL(imageResponse.data);
+                        imageUrls.push(imageUrl);
+                        return { ...item, imageUrl };
+                    } catch (error) {
+                        console.error(`Error fetching image for product ID: ${item.id}`, error);
+                        return { ...item, imageUrl: unplugged };
+                    }
+                }));
+
+                if (!cancelled) setCartItems(cartItemsWithImages);
+            } catch (error) {
+                console.error("Error fetching cart images:", error);
+                if (!cancelled) setCartItems(cart.map(item => ({ ...item, imageUrl: unplugged })));
+            } finally {
+                if (!cancelled) setLoading(false);
+            }
+        };
+
+        fetchImagesAndUpdateCart();
+
+        return () => {
+            cancelled = true;
+            imageUrls.forEach(url => URL.revokeObjectURL(url));
+        };
     }, [cart]);
 
     useEffect(() => {
-
-        const total =
-            cartItems.reduce(
-                (acc, item) =>
-                    acc +
-                    Number(item.price) *
-                        item.quantity,
-                0
-            );
-
+        const total = cartItems.reduce((acc, item) => acc + Number(item.price) * item.quantity, 0);
         setTotalPrice(total);
-
     }, [cartItems]);
 
-    const convertUrlToFile = async (
-        blobData: Blob,
-        fileName: string
-    ): Promise<File> => {
+    const handleIncreaseQuantity = async (itemId: number): Promise<void> => {
+        try {
+            const item = cartItems.find(item => item.id === itemId);
+            if (!item) return;
 
-        return new File(
-            [blobData],
-            fileName,
-            {
-                type: blobData.type
+            if (item.quantity >= item.stockQuantity) {
+                alert("Cannot add more than available stock.");
+                return;
             }
-        );
+
+            setUpdatingItem(itemId);
+            await updateCartQuantity(itemId, item.quantity + 1);
+            await refreshCart();
+        } catch (error) {
+            console.error("Error increasing quantity:", error);
+        } finally {
+            setUpdatingItem(null);
+        }
     };
 
-    const handleIncreaseQuantity = async (itemId: number) => {
+    const handleDecreaseQuantity = async (itemId: number): Promise<void> => {
+        try {
+            const item = cartItems.find(item => item.id === itemId);
+            if (!item || item.quantity <= 1) return;
 
-    try {
-
-        const item = cartItems.find(
-            (item) => item.id === itemId
-        );
-
-        if (!item) {
-            console.error("Item not found:", itemId);
-            return;
+            setUpdatingItem(itemId);
+            await updateCartQuantity(itemId, item.quantity - 1);
+            await refreshCart();
+        } catch (error) {
+            console.error("Error decreasing quantity:", error);
+        } finally {
+            setUpdatingItem(null);
         }
+    };
 
-        if (item.quantity >= item.stockQuantity) {
-            alert("Cannot add more than available stock");
-            return;
+    const handleRemoveFromCart = async (itemId: number): Promise<void> => {
+        try {
+            setRemovingItem(itemId);
+            await removeFromCart(itemId);
+            setCartItems(currentItems => currentItems.filter(item => item.id !== itemId));
+            await refreshCart();
+        } catch (error) {
+            console.error("Error removing item:", error);
+        } finally {
+            setRemovingItem(null);
         }
+    };
 
-        await updateCartQuantity(
-            itemId,
-            item.quantity + 1
-        );
-
-        await refreshCart();
-
-    } catch (error) {
-
-        console.error(
-            "Error increasing quantity:",
-            error
-        );
-
-    }
-};
-
-    const handleDecreaseQuantity = async (itemId: number) => {
-
-    try {
-
-        const item = cartItems.find(
-            (item) => item.id === itemId
-        );
-
-        if (!item) {
-            return;
-        }
-
-        if (item.quantity <= 1) {
-            return;
-        }
-
-        await updateCartQuantity(
-            itemId,
-            item.quantity - 1
-        );
-
-        await refreshCart();
-
-    } catch (error) {
-
-        console.error(
-            "Error decreasing quantity:",
-            error
-        );
-
-    }
-};
-
-    const handleRemoveFromCart = async (
-    itemId: number
-) => {
-
-    try {
-
-        await removeFromCart(itemId);
-
-        await refreshCart();
-
-        setCartItems(
-            (currentItems) =>
-                currentItems.filter(
-                    (item) =>
-                        item.id !== itemId
-                )
-        );
-
-    } catch (error) {
-
-        console.error(
-            "Error removing item:",
-            error
-        );
-
-    }
-};
-
-    // const handleCheckout = async (): Promise<void> => {
-
-    //     try {
-
-    //         /*
-    //          * This preserves your existing
-    //          * product-stock update logic.
-    //          *
-    //          * Your newer backend has a proper
-    //          * /customer/orders/checkout endpoint,
-    //          * so we'll replace this later with
-    //          * the real order checkout flow.
-    //          */
-
-    //         for (const item of cartItems) {
-
-    //             const {
-    //                 imageUrl,
-    //                 imageName,
-    //                 imageType,
-    //                 quantity,
-    //                 ...rest
-    //             } = item;
-
-    //             const updatedStockQuantity =
-    //                 item.stockQuantity -
-    //                 quantity;
-
-    //             const updatedProductData = {
-    //                 ...rest,
-    //                 stockQuantity:
-    //                     updatedStockQuantity
-    //             };
-
-    //             console.log(
-    //                 "Updated product data",
-    //                 updatedProductData
-    //             );
-
-    //             const cartProduct =
-    //                 new FormData();
-
-    //             if (cartImage) {
-
-    //                 cartProduct.append(
-    //                     "imageFile",
-    //                     cartImage
-    //                 );
-    //             }
-
-    //             cartProduct.append(
-    //                 "product",
-    //                 new Blob(
-    //                     [
-    //                         JSON.stringify(
-    //                             updatedProductData
-    //                         )
-    //                     ],
-    //                     {
-    //                         type:
-    //                             "application/json"
-    //                     }
-    //                 )
-    //             );
-
-    //             try {
-
-    //                 await API.put(
-    //                     `/product/${item.id}`,
-    //                     cartProduct
-    //                 );
-
-    //                 console.log(
-    //                     "Product updated successfully"
-    //                 );
-
-    //             } catch (error) {
-
-    //                 console.error(
-    //                     "Error updating product:",
-    //                     error
-    //                 );
-    //             }
-    //         }
-
-    //         clearCart();
-
-    //         setCartItems([]);
-
-    //         setShowModal(false);
-
-    //     } catch (error) {
-
-    //         console.error(
-    //             "Error during checkout:",
-    //             error
-    //         );
-    //     }
-    // };
-    const handleCheckout = async (addressId: number) => {
-    try {
-
-        console.log("========== CHECKOUT ==========");
-        console.log("Address ID:", addressId);
-        console.log("Cart Items:", cartItems);
-        console.log("Total:", totalPrice);
-
-        const response = await API.post(
-            "/customer/orders/checkout",
-            {
-                addressId: addressId
+    const handleCheckout = async (addressId: number, paymentMethod: PaymentMethod): Promise<void> => {
+        try {
+            if (paymentMethod === "COD") {
+                const response = await API.post("/customer/orders/checkout", { addressId, paymentMethod: "COD" });
+                alert(`Order placed successfully!\nOrder ID: ${response.data.orderId}`);
+                await clearCart();
+                setCartItems([]);
+                setTotalPrice(0);
+                await refreshCart();
+                setShowModal(false);
+                navigate("/");
+                return;
             }
-        );
 
-        console.log(
-            "ORDER CREATED:",
-            response.data
-        );
+            const razorpayLoaded = await loadRazorpayScript();
+            if (!razorpayLoaded) throw new Error("Unable to load Razorpay. Please check your internet connection.");
 
-        alert(
-            `Order placed successfully!\nOrder ID: ${response.data.orderId}`
-        );
+            const paymentOrderResponse = await API.post("/customer/orders/payment/create-order", { addressId, paymentMethod });
+            const razorpayOrder = paymentOrderResponse.data;
 
-        /*
-         * Backend already clears the database cart.
-         */
+            await new Promise<void>((resolve, reject) => {
+                const options = {
+                    key: razorpayOrder.keyId,
+                    amount: Number(razorpayOrder.amount) * 100,
+                    currency: razorpayOrder.currency || "INR",
+                    name: "E-Commerce Store",
+                    description: "Secure Payment",
+                    order_id: razorpayOrder.razorpayOrderId,
+                    handler: async (response: any) => {
+                        try {
+                            const verifyResponse = await API.post("/customer/orders/payment/verify", {
+                                addressId,
+                                paymentMethod,
+                                razorpayOrderId: response.razorpay_order_id,
+                                razorpayPaymentId: response.razorpay_payment_id,
+                                razorpaySignature: response.razorpay_signature
+                            });
 
-        clearCart();
+                            alert(`Payment successful!\nOrder ID: ${verifyResponse.data.orderId}`);
+                            await clearCart();
+                            setCartItems([]);
+                            setTotalPrice(0);
+                            await refreshCart();
+                            setShowModal(false);
+                            navigate("/");
+                            resolve();
+                        } catch (verifyError: any) {
+                            console.error("PAYMENT VERIFICATION ERROR:", verifyError);
+                            alert(verifyError?.response?.data?.message || "Payment verification failed.");
+                            reject(verifyError);
+                        }
+                    },
+                    modal: { ondismiss: () => reject(new Error("Payment cancelled.")) },
+                    theme: { color: "#111827" }
+                };
 
-        setCartItems([]);
+                const razorpay = new window.Razorpay(options);
+                razorpay.open();
+            });
+        } catch (error: any) {
+            console.error("CHECKOUT ERROR:", error);
 
-        setTotalPrice(0);
+            const message = error?.response?.data?.message || error?.response?.data || error?.message || "Checkout failed. Please try again.";
+            if (message !== "Payment cancelled.") alert(message);
+            throw error;
+        }
+    };
 
-        setShowModal(false);
-
-        /*
-         * Refresh frontend cart state too.
-         */
-
-        await refreshCart();
-
-    } catch (error: any) {
-
-        console.error(
-            "========== CHECKOUT ERROR =========="
-        );
-
-        console.error(
-            "FULL ERROR:",
-            error
-        );
-
-        console.error(
-            "STATUS:",
-            error?.response?.status
-        );
-
-        console.error(
-            "RESPONSE:",
-            error?.response?.data
-        );
-
-        console.error(
-            "MESSAGE:",
-            error?.message
-        );
-
-        console.error(
-            "==============================="
-        );
-
-        alert(
-            error?.response?.data ||
-            "Checkout failed. Please try again."
-        );
+    if (loading) {
+        return <div className="cart-page"><div className="cart-loading">Loading your cart...</div></div>;
     }
-};
-    return (
-        <div className="cart-container">
 
-            <div className="shopping-cart">
-
-                <div className="title">
-                    Shopping Bag
-                </div>
-
-                {cartItems.length === 0 ? (
-
-                    <div
-                        className="empty"
-                        style={{
-                            textAlign: "left",
-                            padding: "2rem"
-                        }}
-                    >
-                        <h4>
-                            Your cart is empty
-                        </h4>
+    if (cartItems.length === 0) {
+        return (
+            <div className="cart-page">
+                <div className="cart-wrapper">
+                    <div className="cart-header">
+                        <div>
+                            <span className="cart-eyebrow">YOUR SHOPPING BAG</span>
+                            <h1>Shopping Cart</h1>
+                        </div>
                     </div>
 
-                ) : (
+                    <div className="empty-cart">
+                        <div className="empty-cart-image"><img src={unplugged} alt="Empty cart" /></div>
+                        <h2>Your cart is empty</h2>
+                        <p>Looks like you haven't added anything to your bag yet.</p>
+                        <button type="button" className="continue-shopping-btn" onClick={() => navigate("/")}>Continue Shopping</button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
-                    <>
-                        {cartItems.map(
-                            (item) => (
+    return (
+        <div className="cart-page">
+            <div className="cart-wrapper">
+                <div className="cart-header">
+                    <div>
+                        <span className="cart-eyebrow">YOUR SHOPPING BAG</span>
+                        <h1>Shopping Cart</h1>
+                        <p>{cartItems.length} {cartItems.length === 1 ? "item" : "items"} in your cart</p>
+                    </div>
+                    <button type="button" className="cart-back-btn" onClick={() => navigate("/")}>← Continue Shopping</button>
+                </div>
 
-                                <li
-                                    key={item.id}
-                                    className="cart-item"
-                                >
+                <div className="cart-layout">
+                    <div className="cart-items-section">
+                        <div className="cart-items-card">
+                            {cartItems.map(item => {
+                                const isUpdating = updatingItem === item.id;
+                                const isRemoving = removingItem === item.id;
 
-                                    <div
-                                        className="item"
-                                        style={{
-                                            display:
-                                                "flex",
-                                            alignContent:
-                                                "center"
-                                        }}
-                                    >
-
-                                        <div>
-
-                                            <img
-                                                src={
-                                                    item.imageUrl
-                                                }
-                                                alt={
-                                                    item.name
-                                                }
-                                                className="cart-item-image"
-                                            />
-
+                                return (
+                                    <div key={item.id} className="modern-cart-item">
+                                        <div className="modern-cart-image">
+                                            <img src={item.imageUrl} alt={item.name} onError={event => { event.currentTarget.src = unplugged; }} />
                                         </div>
 
-                                        <div className="description">
+                                        <div className="modern-cart-details">
+                                            <div className="cart-product-info">
+                                                <span className="cart-product-brand">{item.brand || "Brand"}</span>
+                                                <h3>{item.name}</h3>
+                                                {item.categoryName && <span className="cart-product-category">{item.categoryName}</span>}
+                                            </div>
 
-                                            <span>
-                                                {
-                                                    item.brand
-                                                }
-                                            </span>
+                                            <div className="cart-mobile-price">
+                                                ₹{(Number(item.price) * item.quantity).toLocaleString("en-IN")}
+                                            </div>
 
-                                            <span>
-                                                {
-                                                    item.name
-                                                }
-                                            </span>
+                                            <div className="cart-item-controls">
+                                                <div className="quantity-selector">
+                                                    <button type="button" onClick={() => handleDecreaseQuantity(item.id)} disabled={item.quantity <= 1 || isUpdating || isRemoving}>−</button>
+                                                    <span>{item.quantity}</span>
+                                                    <button type="button" onClick={() => handleIncreaseQuantity(item.id)} disabled={item.quantity >= item.stockQuantity || isUpdating || isRemoving}>+</button>
+                                                </div>
 
+                                                <button type="button" className="cart-remove-btn" disabled={isRemoving || isUpdating} onClick={() => handleRemoveFromCart(item.id)}>
+                                                    {isRemoving ? "Removing..." : "Remove"}
+                                                </button>
+                                            </div>
                                         </div>
 
-                                        <div className="quantity">
-
-                                            <button
-                                                className="plus-btn"
-                                                type="button"
-                                                name="button"
-                                                onClick={() =>
-                                                    handleIncreaseQuantity(
-                                                        item.id
-                                                    )
-                                                }
-                                            >
-                                                <i className="bi bi-plus-square-fill"></i>
-                                            </button>
-
-                                            <input
-                                                type="button"
-                                                name="name"
-                                                value={
-                                                    item.quantity
-                                                }
-                                                readOnly
-                                            />
-
-                                            <button
-                                                className="minus-btn"
-                                                type="button"
-                                                name="button"
-                                                onClick={() =>
-                                                    handleDecreaseQuantity(
-                                                        item.id
-                                                    )
-                                                }
-                                            >
-                                                <i className="bi bi-dash-square-fill"></i>
-                                            </button>
-
+                                        <div className="cart-desktop-price">
+                                            <span>Item Total</span>
+                                            <strong>₹{(Number(item.price) * item.quantity).toLocaleString("en-IN")}</strong>
                                         </div>
-
-                                        <div
-                                            className="total-price"
-                                            style={{
-                                                textAlign:
-                                                    "center"
-                                            }}
-                                        >
-                                            $
-                                            {
-                                                Number(
-                                                    item.price
-                                                ) *
-                                                item.quantity
-                                            }
-                                        </div>
-
-                                        <button
-                                            className="remove-btn"
-                                            onClick={() =>
-                                                handleRemoveFromCart(
-                                                    item.id
-                                                )
-                                            }
-                                        >
-                                            <i className="bi bi-trash3-fill"></i>
-                                        </button>
-
                                     </div>
-
-                                </li>
-                            )
-                        )}
-
-                        <div className="total">
-                            Total: ${totalPrice}
+                                );
+                            })}
                         </div>
+                    </div>
 
-                        <Button
-                            className="btn btn-primary"
-                            style={{
-                                width: "100%"
-                            }}
-                            onClick={() =>
-                                setShowModal(true)
-                            }
-                        >
-                            Checkout
-                        </Button>
-
-                    </>
-                )}
-
+                    <aside className="cart-summary-card">
+                        <div className="summary-header"><h2>Order Summary</h2></div>
+                        <div className="summary-row"><span>Subtotal</span><strong>₹{totalPrice.toLocaleString("en-IN")}</strong></div>
+                        <div className="summary-row"><span>Shipping</span><strong className="free-shipping">Free</strong></div>
+                        <div className="summary-divider" />
+                        <div className="summary-total"><span>Total</span><strong>₹{totalPrice.toLocaleString("en-IN")}</strong></div>
+                        <button type="button" className="checkout-btn" onClick={() => setShowModal(true)}>Proceed to Checkout →</button>
+                        <div className="secure-checkout">🔒 Secure checkout</div>
+                    </aside>
+                </div>
             </div>
 
-            <CheckoutPopup
-                show={showModal}
-                handleClose={() =>
-                    setShowModal(false)
-                }
-                cartItems={cartItems}
-                totalPrice={totalPrice}
-                handleCheckout={
-                    handleCheckout
-                }
-            />
-
+            <CheckoutPopup show={showModal} handleClose={() => setShowModal(false)} cartItems={cartItems} totalPrice={totalPrice} handleCheckout={handleCheckout} />
         </div>
     );
 };

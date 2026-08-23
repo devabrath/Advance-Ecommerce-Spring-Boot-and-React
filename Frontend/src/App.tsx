@@ -21,6 +21,7 @@ import VendorProfile from "./pages/VendorProfile";
 import VendorDashboard from "./pages/VendorDashboard";
 import VendorProducts from "./components/VendorProducts";
 import VendorLayout from "./layouts/VendorLayout";
+import VendorRevenue from "./pages/VendorRevenue";
 
 import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -342,6 +343,10 @@ function App() {
                                 element={
                                     <VendorDashboard />
                                 }
+                            />
+                            <Route
+                                path="/vendor/revenue"
+                                element={<VendorRevenue />}
                             />
                             <Route
                                 path="/vendor/orders"

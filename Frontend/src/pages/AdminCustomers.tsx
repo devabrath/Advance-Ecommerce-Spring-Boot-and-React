@@ -27,727 +27,301 @@ const emptyForm: CustomerForm = {
     password: ""
 };
 
+const ITEMS_PER_PAGE = 20;
+
 const AdminCustomers = () => {
-
-    const [customers, setCustomers] =
-        useState<Customer[]>([]);
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState("");
-
-    const [search, setSearch] =
-        useState("");
-
-    const [showForm, setShowForm] =
-        useState(false);
-
-    const [editingId, setEditingId] =
-        useState<number | null>(null);
-
-    const [selectedCustomer, setSelectedCustomer] =
-        useState<Customer | null>(null);
-
-    const [form, setForm] =
-        useState<CustomerForm>(emptyForm);
-
+    const [customers, setCustomers] = useState<Customer[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [search, setSearch] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [showForm, setShowForm] = useState(false);
+    const [editingId, setEditingId] = useState<number | null>(null);
+    const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+    const [form, setForm] = useState<CustomerForm>(emptyForm);
 
     const loadCustomers = async () => {
-
         try {
-
             setLoading(true);
-
-            const response =
-                await API.get<Customer[]>(
-                    "/admin/customers"
-                );
-
-            setCustomers(response.data);
-
+            const { data } = await API.get<Customer[]>("/admin/customers");
+            setCustomers(data);
             setError("");
-
         } catch (err: any) {
-
-            console.error(err);
-
-            setError(
-                err?.response?.data ||
-                "Unable to load customers."
-            );
-
+            setError(err?.response?.data || "Unable to load customers.");
         } finally {
-
             setLoading(false);
         }
     };
 
-
     useEffect(() => {
-
         loadCustomers();
-
     }, []);
 
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) =>
+        setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
-    const handleChange = (
-        e: React.ChangeEvent<
-            HTMLInputElement
-        >
-    ) => {
-
-        setForm({
-            ...form,
-            [e.target.name]: e.target.value
-        });
+    const closeForm = () => {
+        setShowForm(false);
+        setEditingId(null);
+        setForm(emptyForm);
     };
-
 
     const openAdd = () => {
-
         setEditingId(null);
-
         setForm(emptyForm);
-
         setShowForm(true);
     };
 
-
-    const openEdit = (
-        customer: Customer
-    ) => {
-
+    const openEdit = (customer: Customer) => {
         setEditingId(customer.id);
-
         setForm({
-            firstName:
-                customer.firstName,
-
-            lastName:
-                customer.lastName,
-
-            email:
-                customer.email,
-
-            phone:
-                customer.phone || "",
-
+            firstName: customer.firstName,
+            lastName: customer.lastName,
+            email: customer.email,
+            phone: customer.phone || "",
             password: ""
         });
-
         setShowForm(true);
     };
 
-
-    const handleSubmit = async (
-        e: React.FormEvent
-    ) => {
-
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         try {
+            editingId
+                ? await API.put(`/admin/customers/${editingId}`, form)
+                : await API.post("/admin/customers", form);
 
-            if (editingId) {
-
-                await API.put(
-                    `/admin/customers/${editingId}`,
-                    form
-                );
-
-            } else {
-
-                await API.post(
-                    "/admin/customers",
-                    form
-                );
-            }
-
-
-            setShowForm(false);
-
-            setEditingId(null);
-
-            setForm(emptyForm);
-
-            await loadCustomers();
-
+            closeForm();
+            loadCustomers();
         } catch (err: any) {
-
-            alert(
-                err?.response?.data ||
-                "Unable to save customer."
-            );
+            alert(err?.response?.data || "Unable to save customer.");
         }
     };
 
-
-    const toggleStatus = async (
-        customer: Customer
-    ) => {
-
+    const toggleStatus = async (customer: Customer) => {
         try {
-
             await API.patch(
                 `/admin/customers/${customer.id}/status`,
                 null,
-                {
-                    params: {
-                        enabled:
-                            !customer.enabled
-                    }
-                }
+                { params: { enabled: !customer.enabled } }
             );
-
-            await loadCustomers();
-
+            loadCustomers();
         } catch (err: any) {
-
-            alert(
-                err?.response?.data ||
-                "Unable to update status."
-            );
+            alert(err?.response?.data || "Unable to update status.");
         }
     };
 
+    const filteredCustomers = customers.filter(customer =>
+        [
+            customer.firstName,
+            customer.lastName,
+            customer.email,
+            customer.phone || ""
+        ].join(" ").toLowerCase().includes(search.toLowerCase())
+    );
 
-    const filteredCustomers =
-        customers.filter(customer => {
+    const totalPages = Math.ceil(filteredCustomers.length / ITEMS_PER_PAGE);
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const paginatedCustomers = filteredCustomers.slice(
+        startIndex,
+        startIndex + ITEMS_PER_PAGE
+    );
 
-            const text =
-                `${customer.firstName} ${customer.lastName} ${customer.email} ${customer.phone || ""}`
-                    .toLowerCase();
-
-            return text.includes(
-                search.toLowerCase()
-            );
-        });
-
+    if (loading) {
+        return (
+            <div className="admin-customers-page">
+                <div className="customer-loading">Loading customers...</div>
+            </div>
+        );
+    }
 
     return (
-
         <div className="admin-customers-page">
 
-            {/* HEADER */}
-
             <div className="customers-header">
-
                 <div>
-
-                    <h1>
-                        Manage Customers
-                    </h1>
-
-                    <p>
-                        View and manage all customer
-                        accounts.
-                    </p>
-
+                    <h1>Manage Customers</h1>
+                    <p>View and manage all customer accounts.</p>
                 </div>
 
-                <button
-                    className="customer-add-button"
-                    onClick={openAdd}
-                >
+                <button className="customer-add-button" onClick={openAdd}>
                     + Add Customer
                 </button>
-
             </div>
 
-
-            {/* SEARCH */}
+            {error && <div className="customer-error">{error}</div>}
 
             <div className="customer-toolbar">
-
                 <input
-                    type="text"
                     placeholder="Search by name, email or phone..."
                     value={search}
-                    onChange={e =>
-                        setSearch(
-                            e.target.value
-                        )
-                    }
+                    onChange={e => {
+                        setSearch(e.target.value);
+                        setCurrentPage(1);
+                    }}
                 />
 
                 <span>
-                    {filteredCustomers.length}
-                    {" "}
-                    customers
+                    {filteredCustomers.length
+                        ? `Showing ${startIndex + 1} - ${Math.min(
+                            startIndex + ITEMS_PER_PAGE,
+                            filteredCustomers.length
+                        )} of ${filteredCustomers.length} customers`
+                        : "Showing 0 customers"}
                 </span>
-
             </div>
 
+            <div className="customer-table-container">
+                <table className="customer-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Customer</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                            <th>Status</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
 
-            {/* ERROR */}
+                    <tbody>
+                        {paginatedCustomers.map(customer => (
+                            <tr key={customer.id}>
+                                <td>#{customer.id}</td>
+                                <td><strong>{customer.firstName} {customer.lastName}</strong></td>
+                                <td>{customer.email}</td>
+                                <td>{customer.phone || "-"}</td>
 
-            {error && (
+                                <td>
+                                    <span className={`customer-status ${customer.enabled ? "active" : "disabled"}`}>
+                                        {customer.enabled ? "Active" : "Disabled"}
+                                    </span>
+                                </td>
 
-                <div className="customer-error">
-                    {error}
-                </div>
-            )}
+                                <td>
+                                    {new Date(customer.createdAt).toLocaleDateString("en-IN")}
+                                </td>
 
-
-            {/* TABLE */}
-
-            {loading ? (
-
-                <div className="customer-loading">
-                    Loading customers...
-                </div>
-
-            ) : (
-
-                <div className="customer-table-container">
-
-                    <table className="customer-table">
-
-                        <thead>
-
-                            <tr>
-
-                                <th>
-                                    ID
-                                </th>
-
-                                <th>
-                                    Customer
-                                </th>
-
-                                <th>
-                                    Email
-                                </th>
-
-                                <th>
-                                    Phone
-                                </th>
-
-                                <th>
-                                    Status
-                                </th>
-
-                                <th>
-                                    Joined
-                                </th>
-
-                                <th>
-                                    Actions
-                                </th>
-
+                                <td>
+                                    <div className="customer-actions">
+                                        <button onClick={() => setSelectedCustomer(customer)}>View</button>
+                                        <button onClick={() => openEdit(customer)}>Edit</button>
+                                        <button onClick={() => toggleStatus(customer)}>
+                                            {customer.enabled ? "Disable" : "Enable"}
+                                        </button>
+                                    </div>
+                                </td>
                             </tr>
+                        ))}
 
-                        </thead>
+                        {!paginatedCustomers.length && (
+                            <tr>
+                                <td colSpan={7} className="empty-customers">
+                                    No customers found.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
+            {totalPages > 1 && (
+                <div className="customer-pagination">
+                    <button
+                        disabled={currentPage === 1}
+                        onClick={() => setCurrentPage(p => p - 1)}
+                    >
+                        ← Previous
+                    </button>
 
-                        <tbody>
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                        <button
+                            key={page}
+                            className={currentPage === page ? "active" : ""}
+                            onClick={() => setCurrentPage(page)}
+                        >
+                            {page}
+                        </button>
+                    ))}
 
-                            {filteredCustomers.map(
-                                customer => (
-
-                                    <tr
-                                        key={
-                                            customer.id
-                                        }
-                                    >
-
-                                        <td>
-                                            #
-                                            {
-                                                customer.id
-                                            }
-                                        </td>
-
-
-                                        <td>
-
-                                            <strong>
-                                                {
-                                                    customer.firstName
-                                                }
-                                                {" "}
-                                                {
-                                                    customer.lastName
-                                                }
-                                            </strong>
-
-                                        </td>
-
-
-                                        <td>
-                                            {
-                                                customer.email
-                                            }
-                                        </td>
-
-
-                                        <td>
-                                            {
-                                                customer.phone
-                                                    || "-"
-                                            }
-                                        </td>
-
-
-                                        <td>
-
-                                            <span
-                                                className={
-                                                    customer.enabled
-                                                        ? "customer-status active"
-                                                        : "customer-status disabled"
-                                                }
-                                            >
-                                                {
-                                                    customer.enabled
-                                                        ? "Active"
-                                                        : "Disabled"
-                                                }
-                                            </span>
-
-                                        </td>
-
-
-                                        <td>
-
-                                            {new Date(
-                                                customer.createdAt
-                                            ).toLocaleDateString(
-                                                "en-IN"
-                                            )}
-
-                                        </td>
-
-
-                                        <td>
-
-                                            <div className="customer-actions">
-
-                                                <button
-                                                    onClick={() =>
-                                                        setSelectedCustomer(
-                                                            customer
-                                                        )
-                                                    }
-                                                >
-                                                    View
-                                                </button>
-
-                                                <button
-                                                    onClick={() =>
-                                                        openEdit(
-                                                            customer
-                                                        )
-                                                    }
-                                                >
-                                                    Edit
-                                                </button>
-
-                                                <button
-                                                    onClick={() =>
-                                                        toggleStatus(
-                                                            customer
-                                                        )
-                                                    }
-                                                >
-                                                    {
-                                                        customer.enabled
-                                                            ? "Disable"
-                                                            : "Enable"
-                                                    }
-                                                </button>
-
-                                            </div>
-
-                                        </td>
-
-                                    </tr>
-                                )
-                            )}
-
-
-                            {filteredCustomers.length === 0 && (
-
-                                <tr>
-
-                                    <td
-                                        colSpan={7}
-                                        className="empty-customers"
-                                    >
-                                        No customers found.
-                                    </td>
-
-                                </tr>
-                            )}
-
-                        </tbody>
-
-                    </table>
-
+                    <button
+                        disabled={currentPage === totalPages}
+                        onClick={() => setCurrentPage(p => p + 1)}
+                    >
+                        Next →
+                    </button>
                 </div>
             )}
-
-
-            {/* ADD / EDIT MODAL */}
 
             {showForm && (
-
                 <div className="customer-modal-overlay">
-
                     <div className="customer-modal">
-
                         <div className="customer-modal-header">
-
-                            <h2>
-                                {
-                                    editingId
-                                        ? "Edit Customer"
-                                        : "Add Customer"
-                                }
-                            </h2>
-
-                            <button
-                                onClick={() =>
-                                    setShowForm(false)
-                                }
-                            >
-                                ×
-                            </button>
-
+                            <h2>{editingId ? "Edit Customer" : "Add Customer"}</h2>
+                            <button onClick={closeForm}>×</button>
                         </div>
 
-
-                        <form
-                            onSubmit={
-                                handleSubmit
-                            }
-                        >
-
+                        <form onSubmit={handleSubmit}>
                             <div className="customer-form-grid">
-
-                                <input
-                                    name="firstName"
-                                    placeholder="First Name"
-                                    value={
-                                        form.firstName
-                                    }
-                                    onChange={
-                                        handleChange
-                                    }
-                                    required
-                                />
-
-                                <input
-                                    name="lastName"
-                                    placeholder="Last Name"
-                                    value={
-                                        form.lastName
-                                    }
-                                    onChange={
-                                        handleChange
-                                    }
-                                    required
-                                />
-
-                                <input
-                                    name="email"
-                                    type="email"
-                                    placeholder="Email"
-                                    value={
-                                        form.email
-                                    }
-                                    onChange={
-                                        handleChange
-                                    }
-                                    required
-                                />
-
-                                <input
-                                    name="phone"
-                                    placeholder="Phone"
-                                    value={
-                                        form.phone
-                                    }
-                                    onChange={
-                                        handleChange
-                                    }
-                                />
-
+                                {(["firstName", "lastName", "email", "phone"] as const).map(name => (
+                                    <input
+                                        key={name}
+                                        name={name}
+                                        type={name === "email" ? "email" : "text"}
+                                        placeholder={name.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}
+                                        value={form[name]}
+                                        onChange={handleChange}
+                                        required={name !== "phone"}
+                                    />
+                                ))}
                             </div>
-
 
                             <input
                                 name="password"
                                 type="password"
-                                placeholder={
-                                    editingId
-                                        ? "New Password (optional)"
-                                        : "Password"
-                                }
-                                value={
-                                    form.password
-                                }
-                                onChange={
-                                    handleChange
-                                }
-                                required={
-                                    !editingId
-                                }
+                                placeholder={editingId ? "New Password (optional)" : "Password"}
+                                value={form.password}
+                                onChange={handleChange}
+                                required={!editingId}
                             />
 
-
                             <div className="customer-form-actions">
-
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setShowForm(false)
-                                    }
-                                >
-                                    Cancel
+                                <button type="button" onClick={closeForm}>Cancel</button>
+                                <button type="submit">
+                                    {editingId ? "Update Customer" : "Create Customer"}
                                 </button>
-
-                                <button
-                                    type="submit"
-                                >
-                                    {
-                                        editingId
-                                            ? "Update Customer"
-                                            : "Create Customer"
-                                    }
-                                </button>
-
                             </div>
-
                         </form>
-
                     </div>
-
                 </div>
             )}
 
-
-            {/* VIEW MODAL */}
-
             {selectedCustomer && (
-
                 <div className="customer-modal-overlay">
-
                     <div className="customer-modal customer-details">
-
                         <div className="customer-modal-header">
-
-                            <h2>
-                                Customer Details
-                            </h2>
-
-                            <button
-                                onClick={() =>
-                                    setSelectedCustomer(
-                                        null
-                                    )
-                                }
-                            >
-                                ×
-                            </button>
-
+                            <h2>Customer Details</h2>
+                            <button onClick={() => setSelectedCustomer(null)}>×</button>
                         </div>
-
 
                         <div className="customer-detail-list">
-
-                            <div>
-                                <span>
-                                    Customer ID
-                                </span>
-
-                                <strong>
-                                    #
-                                    {
-                                        selectedCustomer.id
-                                    }
-                                </strong>
-                            </div>
-
-
-                            <div>
-                                <span>
-                                    Name
-                                </span>
-
-                                <strong>
-                                    {
-                                        selectedCustomer.firstName
-                                    }
-                                    {" "}
-                                    {
-                                        selectedCustomer.lastName
-                                    }
-                                </strong>
-                            </div>
-
-
-                            <div>
-                                <span>
-                                    Email
-                                </span>
-
-                                <strong>
-                                    {
-                                        selectedCustomer.email
-                                    }
-                                </strong>
-                            </div>
-
-
-                            <div>
-                                <span>
-                                    Phone
-                                </span>
-
-                                <strong>
-                                    {
-                                        selectedCustomer.phone
-                                            || "-"
-                                    }
-                                </strong>
-                            </div>
-
-
-                            <div>
-                                <span>
-                                    Status
-                                </span>
-
-                                <strong>
-                                    {
-                                        selectedCustomer.enabled
-                                            ? "Active"
-                                            : "Disabled"
-                                    }
-                                </strong>
-                            </div>
-
-
-                            <div>
-                                <span>
-                                    Joined
-                                </span>
-
-                                <strong>
-                                    {new Date(
-                                        selectedCustomer.createdAt
-                                    ).toLocaleString(
-                                        "en-IN"
-                                    )}
-                                </strong>
-                            </div>
-
+                            {[
+                                ["Customer ID", `#${selectedCustomer.id}`],
+                                ["Name", `${selectedCustomer.firstName} ${selectedCustomer.lastName}`],
+                                ["Email", selectedCustomer.email],
+                                ["Phone", selectedCustomer.phone || "-"],
+                                ["Status", selectedCustomer.enabled ? "Active" : "Disabled"],
+                                ["Joined", new Date(selectedCustomer.createdAt).toLocaleString("en-IN")]
+                            ].map(([label, value]) => (
+                                <div key={label}>
+                                    <span>{label}</span>
+                                    <strong>{value}</strong>
+                                </div>
+                            ))}
                         </div>
-
                     </div>
-
                 </div>
             )}
 

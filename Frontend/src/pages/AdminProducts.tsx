@@ -1,582 +1,303 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import API from "../axios";
 
 interface Product {
     id: number;
     name: string;
-    description?: string;
     price: number;
     stockQuantity: number;
     productAvailable: boolean;
     brand: string;
-    categoryId?: number;
     categoryName?: string;
-    vendorId?: number;
     shopName: string | null;
 }
 
+interface ProductPage {
+    content: Product[];
+    totalElements: number;
+    totalPages: number;
+}
+
+const PAGE_SIZE = 20;
+
 const AdminProducts = () => {
-
-    const [products, setProducts] =
-        useState<Product[]>([]);
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState("");
-
-    const [search, setSearch] =
-        useState("");
-
-    const [statusFilter, setStatusFilter] =
-        useState("ALL");
-
-
-    // =====================================================
-    // LOAD PRODUCTS
-    // =====================================================
+    const [products, setProducts] = useState<Product[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+    const [search, setSearch] = useState("");
+    const [statusFilter, setStatusFilter] = useState("ALL");
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalElements, setTotalElements] = useState(0);
 
     const fetchProducts = async () => {
-
         try {
-
             setLoading(true);
-
-            const response =
-                await API.get<Product[]>(
-                    "/admin/products"
-                );
-
-            setProducts(response.data);
-
             setError("");
 
+            const { data } = await API.get<ProductPage>("/admin/products", {
+                params: {
+                    keyword: search.trim(),
+                    status: statusFilter,
+                    page,
+                    size: PAGE_SIZE
+                }
+            });
+
+            setProducts(data.content);
+            setTotalPages(data.totalPages);
+            setTotalElements(data.totalElements);
         } catch (err: any) {
-
-            console.error(
-                "Admin products error:",
-                err
-            );
-
-            setError(
-                err?.response?.data ||
-                "Unable to load products."
-            );
-
+            setError(err?.response?.data || "Unable to load products.");
         } finally {
-
             setLoading(false);
         }
     };
 
-
     useEffect(() => {
-
         fetchProducts();
+    }, [page, search, statusFilter]);
 
-    }, []);
-
-
-    // =====================================================
-    // DELETE
-    // =====================================================
-
-    const handleDelete = async (
-        id: number
-    ) => {
-
-        const confirmed =
-            window.confirm(
-                "Are you sure you want to delete this product?"
-            );
-
-        if (!confirmed) {
+    const handleDelete = async (id: number) => {
+        if (!window.confirm("Are you sure you want to delete this product?"))
             return;
-        }
-
 
         try {
-
-            await API.delete(
-                `/admin/products/${id}`
-            );
-
-            setProducts(
-                previous =>
-                    previous.filter(
-                        product =>
-                            product.id !== id
-                    )
-            );
-
+            await API.delete(`/admin/products/${id}`);
+            fetchProducts();
         } catch (err: any) {
-
-            console.error(
-                "Delete error:",
-                err
-            );
-
-            alert(
-                err?.response?.data ||
-                "Unable to delete product."
-            );
+            alert(err?.response?.data || "Unable to delete product.");
         }
     };
 
+    const updateSearch = (value: string) => {
+        setSearch(value);
+        setPage(0);
+    };
 
-    // =====================================================
-    // FILTER
-    // =====================================================
+    const updateStatus = (value: string) => {
+        setStatusFilter(value);
+        setPage(0);
+    };
 
-    const filteredProducts =
-        useMemo(() => {
-
-            const value =
-                search
-                    .trim()
-                    .toLowerCase();
-
-
-            return products.filter(
-                product => {
-
-                    const searchable =
-                        `${product.name}
-                        ${product.brand || ""}
-                        ${product.shopName || ""}
-                        ${product.categoryName || ""}`
-                            .toLowerCase();
-
-
-                    const matchesSearch =
-                        searchable.includes(
-                            value
-                        );
-
-
-                    const matchesStatus =
-                        statusFilter === "ALL"
-                        ||
-                        (
-                            statusFilter ===
-                            "AVAILABLE"
-                            &&
-                            product.productAvailable
-                        )
-                        ||
-                        (
-                            statusFilter ===
-                            "UNAVAILABLE"
-                            &&
-                            !product.productAvailable
-                        )
-                        ||
-                        (
-                            statusFilter ===
-                            "LOW_STOCK"
-                            &&
-                            product.stockQuantity <= 5
-                        );
-
-
-                    return (
-                        matchesSearch &&
-                        matchesStatus
-                    );
-                }
-            );
-
-        }, [
-            products,
-            search,
-            statusFilter
-        ]);
-
-
-    // =====================================================
-    // LOADING
-    // =====================================================
+    const pageNumbers = Array.from(
+        { length: totalPages },
+        (_, i) => i
+    ).filter(
+        i =>
+            i === 0 ||
+            i === totalPages - 1 ||
+            Math.abs(i - page) <= 2
+    );
 
     if (loading) {
-
         return (
             <div className="admin-customers-page">
-
                 <div className="customer-loading">
                     Loading products...
                 </div>
-
             </div>
         );
     }
 
-
-    // =====================================================
-    // PAGE
-    // =====================================================
-
     return (
-
         <div className="admin-customers-page">
 
-            {/* HEADER */}
-
+            {/* Header */}
             <div className="customers-header">
-
                 <div>
-
-                    <h1>
-                        Manage Products
-                    </h1>
-
-                    <p>
-                        Manage all products across
-                        Dunique.
-                    </p>
-
+                    <h1>Manage Products</h1>
+                    <p>Manage all products across Dunique.</p>
                 </div>
-
 
                 <Link
                     to="/admin/products/add"
                     className="customer-add-button"
-                    style={{
-                        textDecoration: "none"
-                    }}
+                    style={{ textDecoration: "none" }}
                 >
                     + Add Product
                 </Link>
-
             </div>
-
-
-            {/* ERROR */}
 
             {error && (
-
-                <div className="customer-error">
-                    {error}
-                </div>
-
+                <div className="customer-error">{error}</div>
             )}
 
-
-            {/* TOOLBAR */}
-
+            {/* Search & Filter */}
             <div className="customer-toolbar">
-
                 <input
-                    type="text"
                     placeholder="Search product, brand, vendor..."
                     value={search}
-                    onChange={e =>
-                        setSearch(
-                            e.target.value
-                        )
-                    }
+                    onChange={e => updateSearch(e.target.value)}
                 />
 
-
                 <select
+                    className="admin-filter-select"
                     value={statusFilter}
-                    onChange={e =>
-                        setStatusFilter(
-                            e.target.value
-                        )
-                    }
-                    style={{
-                        padding: "10px 13px",
-                        border:
-                            "1px solid #d1d5db",
-                        borderRadius: "8px",
-                        outline: "none",
-                        background: "white"
-                    }}
+                    onChange={e => updateStatus(e.target.value)}
                 >
-
-                    <option value="ALL">
-                        All Products
-                    </option>
-
-                    <option value="AVAILABLE">
-                        Available
-                    </option>
-
-                    <option value="UNAVAILABLE">
-                        Unavailable
-                    </option>
-
-                    <option value="LOW_STOCK">
-                        Low Stock
-                    </option>
-
+                    <option value="ALL">All Products</option>
+                    <option value="AVAILABLE">Available</option>
+                    <option value="UNAVAILABLE">Unavailable</option>
+                    <option value="LOW_STOCK">Low Stock</option>
                 </select>
 
-
-                <span>
-                    {filteredProducts.length}
-                    {" "}
-                    products
-                </span>
-
+                <span>{totalElements} products</span>
             </div>
 
-
-            {/* TABLE */}
-
+            {/* Products */}
             <div className="customer-table-container">
-
                 <table className="customer-table">
-
                     <thead>
-
                         <tr>
-
-                            <th>
-                                ID
-                            </th>
-
-                            <th>
-                                Product
-                            </th>
-
-                            <th>
-                                Brand
-                            </th>
-
-                            <th>
-                                Category
-                            </th>
-
-                            <th>
-                                Vendor
-                            </th>
-
-                            <th>
-                                Price
-                            </th>
-
-                            <th>
-                                Stock
-                            </th>
-
-                            <th>
-                                Status
-                            </th>
-
-                            <th>
-                                Actions
-                            </th>
-
+                            <th>ID</th>
+                            <th>Product</th>
+                            <th>Brand</th>
+                            <th>Category</th>
+                            <th>Vendor</th>
+                            <th>Price</th>
+                            <th>Stock</th>
+                            <th>Status</th>
+                            <th>Actions</th>
                         </tr>
-
                     </thead>
 
-
                     <tbody>
-
-                        {filteredProducts.length === 0 ? (
-
+                        {!products.length ? (
                             <tr>
-
-                                <td
-                                    colSpan={9}
-                                    className="empty-customers"
-                                >
+                                <td colSpan={9} className="empty-customers">
                                     No products found.
                                 </td>
-
                             </tr>
+                        ) : products.map(product => (
+                            <tr key={product.id}>
+                                <td>#{product.id}</td>
+                                <td><strong>{product.name}</strong></td>
+                                <td>{product.brand || "-"}</td>
+                                <td>{product.categoryName || "-"}</td>
+                                <td>{product.shopName || "-"}</td>
 
-                        ) : (
+                                <td>
+                                    <strong>
+                                        ₹{Number(product.price).toLocaleString("en-IN")}
+                                    </strong>
+                                </td>
 
-                            filteredProducts.map(
-                                product => (
-
-                                    <tr
-                                        key={
-                                            product.id
-                                        }
+                                <td>
+                                    <span
+                                        style={{
+                                            fontWeight: product.stockQuantity <= 5 ? 700 : 400,
+                                            color: product.stockQuantity <= 5
+                                                ? "#dc2626"
+                                                : "#374151"
+                                        }}
                                     >
+                                        {product.stockQuantity}
+                                    </span>
+                                </td>
 
-                                        {/* ID */}
+                                <td>
+                                    <span
+                                        className={`customer-status ${
+                                            product.productAvailable
+                                                ? "active"
+                                                : "disabled"
+                                        }`}
+                                    >
+                                        {product.productAvailable
+                                            ? "Available"
+                                            : "Unavailable"}
+                                    </span>
+                                </td>
 
-                                        <td>
-                                            #
-                                            {
-                                                product.id
+                                <td>
+                                    <div className="customer-actions">
+                                        <button
+                                            onClick={() =>
+                                                window.location.href = `/product/${product.id}`
                                             }
-                                        </td>
+                                        >
+                                            View
+                                        </button>
 
-
-                                        {/* PRODUCT */}
-
-                                        <td>
-
-                                            <strong>
-                                                {
-                                                    product.name
-                                                }
-                                            </strong>
-
-                                        </td>
-
-
-                                        {/* BRAND */}
-
-                                        <td>
-                                            {
-                                                product.brand
-                                                    || "-"
+                                        <button
+                                            onClick={() =>
+                                                window.location.href =
+                                                `/admin/products/edit/${product.id}`
                                             }
-                                        </td>
+                                        >
+                                            Edit
+                                        </button>
 
-
-                                        {/* CATEGORY */}
-
-                                        <td>
-                                            {
-                                                product.categoryName
-                                                    || "-"
-                                            }
-                                        </td>
-
-
-                                        {/* VENDOR */}
-
-                                        <td>
-                                            {
-                                                product.shopName
-                                                    || "-"
-                                            }
-                                        </td>
-
-
-                                        {/* PRICE */}
-
-                                        <td>
-
-                                            <strong>
-                                                ₹
-                                                {Number(
-                                                    product.price
-                                                ).toLocaleString(
-                                                    "en-IN"
-                                                )}
-                                            </strong>
-
-                                        </td>
-
-
-                                        {/* STOCK */}
-
-                                        <td>
-
-                                            <span
-                                                style={{
-                                                    fontWeight:
-                                                        product.stockQuantity <= 5
-                                                            ? 700
-                                                            : 400,
-
-                                                    color:
-                                                        product.stockQuantity <= 5
-                                                            ? "#dc2626"
-                                                            : "#374151"
-                                                }}
-                                            >
-                                                {
-                                                    product.stockQuantity
-                                                }
-                                            </span>
-
-                                        </td>
-
-
-                                        {/* STATUS */}
-
-                                        <td>
-
-                                            {product.productAvailable ? (
-
-                                                <span className="customer-status active">
-                                                    Available
-                                                </span>
-
-                                            ) : (
-
-                                                <span className="customer-status disabled">
-                                                    Unavailable
-                                                </span>
-
-                                            )}
-
-                                        </td>
-
-
-                                        {/* ACTIONS */}
-
-                                        <td>
-
-                                            <div
-                                                className="customer-actions"
-                                            >
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        window.location.href =
-                                                        `/product/${product.id}`
-                                                    }
-                                                >
-                                                    View
-                                                </button>
-
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        window.location.href =
-                                                        `/admin/products/edit/${product.id}`
-                                                    }
-                                                >
-                                                    Edit
-                                                </button>
-
-
-                                                <button
-                                                    type="button"
-                                                    onClick={() =>
-                                                        handleDelete(
-                                                            product.id
-                                                        )
-                                                    }
-                                                    style={{
-                                                        color:
-                                                            "#dc2626"
-                                                    }}
-                                                >
-                                                    Delete
-                                                </button>
-
-                                            </div>
-
-                                        </td>
-
-                                    </tr>
-                                )
-                            )
-
-                        )}
-
+                                        <button
+                                            style={{ color: "#dc2626" }}
+                                            onClick={() => handleDelete(product.id)}
+                                        >
+                                            Delete
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        ))}
                     </tbody>
-
                 </table>
-
             </div>
 
+            {/* Pagination */}
+            {totalPages > 0 && (
+                <div className="product-pagination">
+                    <span className="pagination-info">
+                        Showing {totalElements ? page * PAGE_SIZE + 1 : 0}
+                        {" – "}
+                        {Math.min((page + 1) * PAGE_SIZE, totalElements)}
+                        {" of "}
+                        {totalElements}
+                    </span>
+
+                    <div className="customer-pagination">
+                        <button
+                            className="pagination-button"
+                            disabled={page === 0}
+                            onClick={() => setPage(p => Math.max(p - 1, 0))}
+                        >
+                            ← Previous
+                        </button>
+
+                        {pageNumbers.map((index, position) => (
+                            <React.Fragment key={index}>
+                                {position > 0 &&
+                                    index - pageNumbers[position - 1] > 1 && (
+                                        <span className="pagination-dots">
+                                            ...
+                                        </span>
+                                    )}
+
+                                <button
+                                    className={
+                                        page === index
+                                            ? "pagination-button active"
+                                            : "pagination-button"
+                                    }
+                                    onClick={() => setPage(index)}
+                                >
+                                    {index + 1}
+                                </button>
+                            </React.Fragment>
+                        ))}
+
+                        <button
+                            className="pagination-button"
+                            disabled={page >= totalPages - 1}
+                            onClick={() =>
+                                setPage(p => Math.min(p + 1, totalPages - 1))
+                            }
+                        >
+                            Next →
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

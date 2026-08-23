@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Alert, Button, Card, Form, Spinner } from "react-bootstrap";
 import { Link, useNavigate } from "react-router-dom";
 import API from "../axios";
 
@@ -11,46 +12,30 @@ interface RegisterForm {
 }
 
 const Register = () => {
-
     const navigate = useNavigate();
 
-    const [form, setForm] =
-        useState<RegisterForm>({
-            firstName: "",
-            lastName: "",
-            email: "",
-            password: "",
-            phone: ""
-        });
+    const [form, setForm] = useState<RegisterForm>({
+        firstName: "",
+        lastName: "",
+        email: "",
+        password: "",
+        phone: ""
+    });
 
-    const [error, setError] =
-        useState<string>("");
+    const [error, setError] = useState("");
+    const [success, setSuccess] = useState("");
+    const [loading, setLoading] = useState(false);
 
-    const [success, setSuccess] =
-        useState<string>("");
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
 
-    const [loading, setLoading] =
-        useState<boolean>(false);
-
-    const handleChange = (
-        e: React.ChangeEvent<HTMLInputElement>
-    ): void => {
-
-        const {
-            name,
-            value
-        } = e.target;
-
-        setForm((previous) => ({
-            ...previous,
+        setForm(prev => ({
+            ...prev,
             [name]: value
         }));
     };
 
-    const handleSubmit = async (
-        e: React.FormEvent<HTMLFormElement>
-    ): Promise<void> => {
-
+    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
         setError("");
@@ -58,212 +43,119 @@ const Register = () => {
         setLoading(true);
 
         try {
+            await API.post("/auth/register", form);
 
-            await API.post(
-                "/auth/register",
-                form
-            );
+            setSuccess("Registration successful! Redirecting to login...");
 
-            setSuccess(
-                "Registration successful! Redirecting to login..."
-            );
-
-            setTimeout(() => {
-                navigate("/login");
-            }, 1500);
-
+            setTimeout(() => navigate("/login"), 1500);
         } catch (error: any) {
-
-            console.error(
-                "Registration error:",
-                error
-            );
-
             setError(
                 error.response?.data ||
-                "Registration failed"
+                "Registration failed. Please try again."
             );
-
         } finally {
-
             setLoading(false);
         }
     };
 
     return (
-        <div
-            className="container"
-            style={{
-                marginTop: "100px",
-                maxWidth: "600px"
-            }}
-        >
-
-            <div className="card shadow p-4" style={{
-                width: "auto",
-            }}>
-
-                <h2
-                    className="text-center mb-4"
-                >
-                    Create Account
-                </h2>
-
-                {error && (
-                    <div className="alert alert-danger">
-                        {error}
+        <main className="auth-page">
+            <Card className="auth-card border-0 shadow">
+                <Card.Body className="p-4 p-md-5">
+                    <div className="auth-header">
+                        <h2>Create Account</h2>
+                        <p>Join us and start shopping today</p>
                     </div>
-                )}
 
-                {success && (
-                    <div className="alert alert-success">
-                        {success}
-                    </div>
-                )}
+                    {error && <Alert variant="danger">{error}</Alert>}
+                    {success && <Alert variant="success">{success}</Alert>}
 
-                <form
-                    onSubmit={handleSubmit}
-                >
+                    <Form onSubmit={handleSubmit}>
+                        <div className="row">
+                            <Form.Group className="col-md-6 mb-3">
+                                <Form.Label>First Name</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    name="firstName"
+                                    value={form.firstName}
+                                    onChange={handleChange}
+                                    placeholder="First name"
+                                    required
+                                />
+                            </Form.Group>
 
-                    <div className="row">
-
-                        <div className="col-md-6 mb-3">
-
-                            <label className="form-label">
-                                First Name
-                            </label>
-
-                            <input
-                                type="text"
-                                className="form-control"
-                                name="firstName"
-                                value={
-                                    form.firstName
-                                }
-                                onChange={
-                                    handleChange
-                                }
-                                placeholder="First name"
-                                required
-                            />
-
+                            <Form.Group className="col-md-6 mb-3">
+                                <Form.Label>Last Name</Form.Label>
+                                <Form.Control
+                                    type="text"
+                                    name="lastName"
+                                    value={form.lastName}
+                                    onChange={handleChange}
+                                    placeholder="Last name"
+                                    required
+                                />
+                            </Form.Group>
                         </div>
 
-                        <div className="col-md-6 mb-3">
-
-                            <label className="form-label">
-                                Last Name
-                            </label>
-
-                            <input
-                                type="text"
-                                className="form-control"
-                                name="lastName"
-                                value={
-                                    form.lastName
-                                }
-                                onChange={
-                                    handleChange
-                                }
-                                placeholder="Last name"
+                        <Form.Group className="mb-3">
+                            <Form.Label>Email Address</Form.Label>
+                            <Form.Control
+                                type="email"
+                                name="email"
+                                value={form.email}
+                                onChange={handleChange}
+                                placeholder="Enter your email"
                                 required
                             />
+                        </Form.Group>
 
-                        </div>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Phone Number</Form.Label>
+                            <Form.Control
+                                type="tel"
+                                name="phone"
+                                value={form.phone}
+                                onChange={handleChange}
+                                placeholder="Enter your phone number"
+                            />
+                        </Form.Group>
 
-                    </div>
+                        <Form.Group className="mb-4">
+                            <Form.Label>Password</Form.Label>
+                            <Form.Control
+                                type="password"
+                                name="password"
+                                value={form.password}
+                                onChange={handleChange}
+                                placeholder="Minimum 6 characters"
+                                minLength={6}
+                                required
+                            />
+                        </Form.Group>
 
-                    <div className="mb-3">
+                        <Button
+                            type="submit"
+                            className="w-100 auth-button"
+                            disabled={loading}
+                        >
+                            {loading ? (
+                                <>
+                                    <Spinner size="sm" className="me-2" />
+                                    Creating Account...
+                                </>
+                            ) : (
+                                "Create Account"
+                            )}
+                        </Button>
+                    </Form>
 
-                        <label className="form-label">
-                            Email
-                        </label>
-
-                        <input
-                            type="email"
-                            className="form-control"
-                            name="email"
-                            value={
-                                form.email
-                            }
-                            onChange={
-                                handleChange
-                            }
-                            placeholder="Enter your email"
-                            required
-                        />
-
-                    </div>
-
-                    <div className="mb-3">
-
-                        <label className="form-label">
-                            Phone
-                        </label>
-
-                        <input
-                            type="tel"
-                            className="form-control"
-                            name="phone"
-                            value={
-                                form.phone
-                            }
-                            onChange={
-                                handleChange
-                            }
-                            placeholder="Enter phone number"
-                        />
-
-                    </div>
-
-                    <div className="mb-3">
-
-                        <label className="form-label">
-                            Password
-                        </label>
-
-                        <input
-                            type="password"
-                            className="form-control"
-                            name="password"
-                            value={
-                                form.password
-                            }
-                            onChange={
-                                handleChange
-                            }
-                            placeholder="Minimum 6 characters"
-                            minLength={6}
-                            required
-                        />
-
-                    </div>
-
-                    <button
-                        type="submit"
-                        className="btn btn-primary w-100"
-                        disabled={loading}
-                    >
-                        {loading
-                            ? "Creating Account..."
-                            : "Register"}
-                    </button>
-
-                </form>
-
-                <p className="text-center mt-3">
-
-                    Already have an account?{" "}
-
-                    <Link to="/login">
-                        Login
-                    </Link>
-
-                </p>
-
-            </div>
-
-        </div>
+                    <p className="auth-footer">
+                        Already have an account?{" "}
+                        <Link to="/login">Login</Link>
+                    </p>
+                </Card.Body>
+            </Card>
+        </main>
     );
 };
 
